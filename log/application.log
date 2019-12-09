@@ -1,0 +1,42 @@
+[DEBUG] 2019-12-07 19:42:01 (go-api/log.go:15) [api] database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 19:42:01 (go-api/log.go:15) [api] starting server at :8000
+[INFO ] 2019-12-07 19:42:03 (go-api/log.go:20) [api] server listening at :8000
+[DEBUG] 2019-12-07 19:42:14 (go-api/log.go:15) [api] database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 19:42:14 (go-api/log.go:15) [api] starting server at :8000
+[INFO ] 2019-12-07 19:42:16 (go-api/log.go:20) [api] server listening at :8000
+[DEBUG] 2019-12-07 20:21:31 (go-api/log.go:15) [api] database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 20:21:31 (go-api/log.go:15) [api] starting server at :8000
+[INFO ] 2019-12-07 20:21:33 (go-api/log.go:20) [api] server listening at :8000
+[DEBUG] 2019-12-07 20:21:49 (go-api/log.go:15) [api] database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 20:21:49 (go-api/log.go:15) [api] starting server at :8000
+[INFO ] 2019-12-07 20:21:51 (go-api/log.go:20) [api] server listening at :8000
+[DEBUG] 2019-12-07 20:22:16 (go-api/log.go:15) [api] map[/products:map[query:SELECT * FROM product]]
+[DEBUG] 2019-12-07 20:22:23 (go-api/log.go:15) [api] map[/products:map[query:SELECT * FROM product]]
+[DEBUG] 2019-12-07 20:22:23 (go-api/log.go:15) [api] &{[{* }] map[] [] product [] 0 0}
+[DEBUG] 2019-12-07 23:20:04 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:20:04 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:20:06 (go-api/log.go:23) server listening at :8000
+[DEBUG] 2019-12-07 23:22:54 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:22:54 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:22:56 (go-api/log.go:23) server listening at :8000
+[DEBUG] 2019-12-07 23:23:19 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:23:19 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:23:21 (go-api/log.go:23) server listening at :8000
+[DEBUG] 2019-12-07 23:24:51 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:24:51 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:24:53 (go-api/log.go:23) server listening at :8000
+[DEBUG] 2019-12-07 23:25:50 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:25:50 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:25:52 (go-api/log.go:23) server listening at :8000
+[DEBUG] 2019-12-07 23:26:30 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:26:30 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:26:32 (go-api/log.go:23) server listening at :8000
+[DEBUG] 2019-12-07 23:27:25 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:27:25 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:27:27 (go-api/log.go:23) server listening at :8000
+[DEBUG] 2019-12-07 23:28:22 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:28:22 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:28:24 (go-api/log.go:23) server listening at :8000
+[DEBUG] 2019-12-07 23:28:52 (go-api/log.go:18) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-07 23:28:52 (go-api/log.go:18) starting server at :8000
+[INFO ] 2019-12-07 23:28:54 (go-api/log.go:23) server listening at :8000
