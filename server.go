@@ -20,6 +20,10 @@ type Server struct {
 	getMap  map[string]*Parameter
 	postMap map[string]*Parameter
 
+	//supported auth: jwt
+	authType  string
+	authQuery string
+
 	configFile string
 	config     json.Object
 
@@ -51,8 +55,15 @@ func (s *Server) Start() error {
 	logInfo(fmt.Sprintf(`database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName))
 
 	addr := `:` + strconv.Itoa(s.Port())
+	if auth := cfg.GetJSONObject(`auth`); auth != nil {
+		s.authType = auth.GetStringOr(`type`, `jwt`)
+		s.authQuery = auth.GetString(`query`)
+		if s.authQuery == `` {
+			return fmt.Errorf(`incorrect configuration: %s`, `auth.query`)
+		}
+	}
 
-	if e := s.parseAPIConfig(); e != nil {
+	if e := s.parseAPI(); e != nil {
 		return e
 	}
 	svr := &http.Server{
@@ -83,7 +94,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) parseAPIConfig() error {
+func (s *Server) parseAPI() error {
 	apis := s.config.GetJSONObject(`api`)
 
 	regex := regexp.MustCompile(`^(GET|POST)(?:,(GET|POST)|) (/\S*)$`)
@@ -112,10 +123,14 @@ func (s *Server) parseAPIConfig() error {
 					return fmt.Errorf(`invalid API value for %s`, key)
 				}
 			}
-			p = &Parameter{children: params}
+			if len(params) > 0 {
+				p = &Parameter{children: params, secure: params[0].secure}
+			}
 		}
-		s.registerAPI(m[1], m[3], p)
-		s.registerAPI(m[2], m[3], p)
+		if p != nil {
+			s.registerAPI(m[1], m[3], p)
+			s.registerAPI(m[2], m[3], p)
+		}
 	}
 	return nil
 }
@@ -150,6 +165,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	defer func() {
+		w.Header().Set(`Content-Type`, `application/json`)
 		if r := recover(); r != nil {
 			resp.Put(`status`, 99).Put(`message`, `Error`)
 			switch r := r.(type) {
@@ -161,7 +177,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 			w.WriteHeader(http.StatusBadRequest)
 		}
-		w.Header().Set(`Content-Type`, `application/json`)
 		w.Write(resp.ToBytes())
 	}()
 
@@ -176,11 +191,24 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			panic(`resource not found`)
 		}
+		logDebug(path, p.secure)
+
+		if p.secure {
+			var e error
+			if s.authType == `jwt` {
+				e = jwtAuthorize(s, r, &resp, p)
+			}
+			if e != nil {
+				logError(e)
+				panic(fmt.Sprintf(`authorization for %s failed`, path))
+			}
+		}
+
 		if e := s.process(parseRequest(r), &resp, p); e != nil {
 			logError(e)
 			panic(fmt.Sprintf(`unable to process resource %s`, path))
 		}
-	}
+	} //TODO if path not prefix with /
 }
 
 func (s *Server) process(req *Request, resp *json.Object, p *Parameter) error {

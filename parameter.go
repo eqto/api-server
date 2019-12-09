@@ -16,6 +16,7 @@ type Parameter struct {
 	qb        *db.QueryBuilder
 	params    []string
 	output    string
+	secure    bool
 
 	children []Parameter
 }
@@ -37,6 +38,7 @@ func newParameter(js json.Object) *Parameter {
 		query:     strings.TrimSpace(js.GetString(`query`)),
 		queryType: strings.TrimSpace(js.GetString(`query_type`)),
 		output:    strings.TrimSpace(js.GetStringOr(`output`, `data`)),
+		secure:    js.GetBoolean(`secure`),
 	}
 	if p.queryType == `` {
 		str := strings.SplitN(p.query, ` `, 2)

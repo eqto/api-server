@@ -6,6 +6,8 @@ replace gitlab.com/tuxer/go-logger => /Users/tuxer/Projects/go/go-logger
 
 replace gitlab.com/tuxer/go-db => /Users/tuxer/Projects/go/go-db
 
+replace gitlab.com/tuxer/go-json => /Users/tuxer/Projects/go/go-json
+
 require (
 	gitlab.com/tuxer/go-db v0.0.0-20191208172203-a895fc44c81c
 	gitlab.com/tuxer/go-json v0.0.0-20191205071804-11fe6c9c1e64
