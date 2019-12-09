@@ -92,12 +92,26 @@ func (s *Server) parseAPIFile() error {
 		if m == nil {
 			return fmt.Errorf(`invalid API: %s`, key)
 		}
-		j, ok := val.(map[string]interface{})
-		if !ok {
-			return fmt.Errorf(`invalid API value for %s`, key)
-		}
-		p := newParameter(json.Object(j))
 
+		var p *Parameter
+		if j, ok := val.(map[string]interface{}); ok {
+			p = newParameter(json.Object(j))
+		} else {
+			arr, ok := val.([]interface{})
+			if !ok {
+				return fmt.Errorf(`invalid API value for %s`, key)
+			}
+			params := []Parameter{}
+			for _, val := range arr {
+				if j, ok := val.(map[string]interface{}); ok {
+					p := newParameter(json.Object(j))
+					params = append(params, *p)
+				} else {
+					return fmt.Errorf(`invalid API value for %s`, key)
+				}
+			}
+			p = &Parameter{children: params}
+		}
 		s.registerAPI(m[1], m[3], p)
 		s.registerAPI(m[2], m[3], p)
 	}
@@ -160,11 +174,35 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			panic(`resource not found`)
 		}
-		s.processParam(parseRequest(r), &resp, p)
+		if e := s.process(parseRequest(r), &resp, p); e != nil {
+			logError(e)
+			panic(fmt.Sprintf(`unable to process resource %s`, path))
+		}
 	}
 }
 
-func (s *Server) processParam(req *Request, resp *json.Object, p *Parameter) {
+func (s *Server) process(req *Request, resp *json.Object, p *Parameter) error {
+	if p.isArray() {
+		tx, e := s.cn.Begin()
+		if e != nil {
+			return e
+		}
+		defer tx.Commit()
+
+		for _, val := range p.children {
+			e := s.processParameter(tx, req, resp, &val)
+			if e != nil {
+				tx.Rollback()
+				return e
+			}
+		}
+	} else {
+		return s.processParameter(s.cn.Tx(nil), req, resp, p)
+	}
+	return nil
+}
+
+func (s *Server) processParameter(tx *db.Tx, req *Request, resp *json.Object, p *Parameter) error {
 	values := []interface{}{}
 
 	for _, val := range p.params {
@@ -199,6 +237,15 @@ func (s *Server) processParam(req *Request, resp *json.Object, p *Parameter) {
 	}
 	switch p.queryType {
 	case `INSERT`:
+		rs, e := tx.Exec(p.query, values...)
+		if e != nil {
+			return e
+		}
+		id, e := rs.LastInsertID()
+		if e != nil {
+			return e
+		}
+		p.putOutput(req, resp, id)
 
 	case `UPDATE`:
 
@@ -206,27 +253,39 @@ func (s *Server) processParam(req *Request, resp *json.Object, p *Parameter) {
 		fallthrough
 	case `SELECT`:
 		page := req.GetInt(`page`)
+
 		maxRows := req.GetInt(`max_rows`)
 		if maxRows == 0 {
-			maxRows = 100
+			maxRows = qb.LimitLength()
+			if maxRows == 0 {
+				maxRows = 100
+			}
 		}
 		if page >= 1 {
 			qb.Limit((page-1)*maxRows, maxRows)
-		}
-		if p.queryType == `GET` {
-			qb.Limit(qb.LimitStart(), 1)
 		}
 		active, direction := req.GetString(`sort.active`), req.GetString(`sort.direction`)
 
 		if active != `` && direction != `` {
 			qb.Order(active, direction)
 		}
+
 		if p.queryType == `GET` {
-			resp.Put(`data`, s.cn.MustGet(qb.ToSQL(), values...))
+			qb.Limit(qb.LimitStart(), 1)
+			rs, e := tx.Get(qb.ToSQL(), values...)
+			if e != nil {
+				return e
+			}
+			p.putOutput(req, resp, rs)
 		} else {
-			resp.Put(`data`, s.cn.MustSelect(qb.ToSQL(), values...))
+			rs, e := tx.Select(qb.ToSQL(), values...)
+			if e != nil {
+				return e
+			}
+			p.putOutput(req, resp, rs)
 		}
 	}
+	return nil
 }
 
 //SetDatabase ...

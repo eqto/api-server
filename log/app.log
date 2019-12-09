@@ -339,3 +339,112 @@
 [DEBUG] 2019-12-09 00:32:10 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
 [DEBUG] 2019-12-09 00:32:10 (go-api/server.go:61) starting server at :8000
 [INFO ] 2019-12-09 00:32:12 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 10:03:33 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 10:03:33 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 10:03:35 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 10:06:44 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 10:06:44 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 10:06:46 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 10:06:47 (go-api/server.go:209) 0x13644e0
+[DEBUG] 2019-12-09 10:06:59 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 10:06:59 (go-api/server.go:61) starting server at :8000
+[DEBUG] 2019-12-09 10:07:01 (go-api/server.go:209) 1
+[INFO ] 2019-12-09 10:07:01 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 10:07:54 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 10:07:54 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 10:07:56 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 10:08:02 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 10:08:02 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 10:08:04 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 10:08:33 (go-api/server.go:47) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 10:08:33 (go-api/server.go:62) starting server at :8000
+[DEBUG] 2019-12-09 10:08:35 (go-api/server.go:213) 0
+[INFO ] 2019-12-09 10:08:35 (go-api/server.go:71) server listening at :8000
+[DEBUG] 2019-12-09 10:36:46 (test/main.go:22) [INSERT INTO user() VALUES(?, ?, ?, ?) user() VALUES(?, ?, ?, ?)]
+[DEBUG] 2019-12-09 10:37:07 (test/main.go:24) INSERT INTO user() VALUES(?, ?, ?, ?)
+[DEBUG] 2019-12-09 10:37:07 (test/main.go:24) user() VALUES(?, ?, ?, ?)
+[DEBUG] 2019-12-09 10:43:40 (test/main.go:24) INSERT INTO user(id, a, b) VALUES(?, ?, ?, ?)
+[DEBUG] 2019-12-09 10:43:40 (test/main.go:24) user(id, a, b) VALUES(?, ?, ?, ?)
+[DEBUG] 2019-12-09 10:51:53 (test/main.go:24) INSERT INTO user(id, a, b) VALUES(?, ?, ?, ?)
+[DEBUG] 2019-12-09 10:51:53 (test/main.go:24) id, a, b
+[DEBUG] 2019-12-09 10:52:08 (test/main.go:24) INSERT INTO user(id, a, b) VALUES(?, ?, ?, ?)
+[DEBUG] 2019-12-09 10:52:08 (test/main.go:24) user
+[DEBUG] 2019-12-09 10:52:08 (test/main.go:24) id, a, b
+[DEBUG] 2019-12-09 11:52:57 (test/main.go:24) INSERT INTO user(id, a, b) VALUES(?, ?, ?, ?)
+[DEBUG] 2019-12-09 11:52:57 (test/main.go:24) user
+[DEBUG] 2019-12-09 11:52:57 (test/main.go:24) id, a, b
+[DEBUG] 2019-12-09 11:53:09 (go-api/server.go:47) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 11:53:09 (go-api/server.go:62) starting server at :8000
+[INFO ] 2019-12-09 11:53:11 (go-api/server.go:71) server listening at :8000
+[DEBUG] 2019-12-09 11:55:17 (go-api/server.go:47) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 11:55:17 (go-api/server.go:62) starting server at :8000
+[INFO ] 2019-12-09 11:55:19 (go-api/server.go:71) server listening at :8000
+[DEBUG] 2019-12-09 11:55:25 (go-api/server.go:203) []
+[DEBUG] 2019-12-09 11:55:35 (go-api/server.go:203) []
+[DEBUG] 2019-12-09 11:56:04 (go-api/server.go:47) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 11:56:04 (go-api/server.go:62) starting server at :8000
+[INFO ] 2019-12-09 11:56:06 (go-api/server.go:71) server listening at :8000
+[DEBUG] 2019-12-09 11:56:23 (go-api/server.go:203) [test testpassword]
+[DEBUG] 2019-12-09 12:23:17 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 12:23:17 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 12:23:19 (go-api/server.go:70) server listening at :8000
+[ERROR] 2019-12-09 12:23:19 (go-api/server.go:164) Error 1364: Field 'role_id' doesn't have a default value
+  (http/server.go:2803) net/http.serverHandler.ServeHTTP
+  (http/server.go:1891) net/http.(*conn).serve
+[ERROR] 2019-12-09 12:23:23 (go-api/server.go:164) Error 1364: Field 'role_id' doesn't have a default value
+  (http/server.go:2803) net/http.serverHandler.ServeHTTP
+  (http/server.go:1891) net/http.(*conn).serve
+[DEBUG] 2019-12-09 12:23:41 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 12:23:41 (go-api/server.go:61) starting server at :8000
+[ERROR] 2019-12-09 12:23:43 (go-api/server.go:164) Error 1364: Field 'ref_id' doesn't have a default value
+  (http/server.go:2803) net/http.serverHandler.ServeHTTP
+  (http/server.go:1891) net/http.(*conn).serve
+[INFO ] 2019-12-09 12:23:43 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 12:23:55 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 12:23:55 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 12:23:57 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 12:25:51 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 12:25:51 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 12:25:53 (go-api/server.go:70) server listening at :8000
+[ERROR] 2019-12-09 12:38:34 (test/main.go:19) invalid API value for POST /addBookA
+  (test/main.go:35) main.main
+[ERROR] 2019-12-09 12:40:37 (test/main.go:19) invalid API value for POST /addBookA
+  (test/main.go:35) main.main
+[DEBUG] 2019-12-09 12:40:58 (go-api/server.go:97) [map[params:name query:INSERT INTO book(name) VALUES(?)]]
+[ERROR] 2019-12-09 12:40:58 (test/main.go:19) invalid API value for POST /addBookA
+  (test/main.go:35) main.main
+[DEBUG] 2019-12-09 12:46:08 (go-api/server.go:97) [map[params:name query:INSERT INTO book(name) VALUES(?)]]
+[DEBUG] 2019-12-09 12:46:08 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 12:46:08 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 12:46:10 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 12:59:27 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 12:59:27 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 12:59:29 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 13:03:57 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 13:03:57 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 13:03:59 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 13:04:42 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 13:04:42 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 13:04:44 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 13:12:32 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 13:12:32 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 13:12:34 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 13:12:58 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 13:12:58 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 13:13:00 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 14:26:24 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 14:26:24 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 14:26:26 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 14:26:41 (go-api/server.go:202) username
+[DEBUG] 2019-12-09 14:26:41 (go-api/server.go:202) password
+[DEBUG] 2019-12-09 14:26:41 (go-api/server.go:202) $id
+[DEBUG] 2019-12-09 14:28:01 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 14:28:01 (go-api/server.go:61) starting server at :8000
+[DEBUG] 2019-12-09 14:28:03 (go-api/server.go:187) &{map[password:testpassword2 username:test2]}
+[DEBUG] 2019-12-09 14:28:03 (go-api/server.go:187) &{map[password:testpassword2 username:test2]}
+[INFO ] 2019-12-09 14:28:03 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 14:30:21 (go-api/server.go:46) database connection goapi@localhost:4006/goapi
+[DEBUG] 2019-12-09 14:30:21 (go-api/server.go:61) starting server at :8000
+[INFO ] 2019-12-09 14:30:23 (go-api/server.go:70) server listening at :8000
+[DEBUG] 2019-12-09 14:30:31 (go-api/server.go:187) &{map[password:testpassword2 username:test3]}
+[DEBUG] 2019-12-09 14:30:31 (go-api/server.go:187) &{map[$id:20 password:testpassword2 username:test3]}
