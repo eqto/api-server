@@ -20,14 +20,8 @@ type Server struct {
 	getMap  map[string]*Parameter
 	postMap map[string]*Parameter
 
-	database struct {
-		hostname string
-		port     int
-		username string
-		password string
-		name     string
-	}
-	apiFile string
+	configFile string
+	config     json.Object
 
 	port int
 	cn   *db.Connection
@@ -35,19 +29,32 @@ type Server struct {
 
 //Start ...
 func (s *Server) Start() error {
-	if e := s.parseAPIFile(); e != nil {
-		return e
-	}
-	c := s.database
-	cn, e := db.NewConnection(c.hostname, c.port, c.username, c.password, c.name)
+	cfg, e := json.ParseFile(s.configFile)
 	if e != nil {
-		return fmt.Errorf(`unable to open database connection %s@%s:%d/%s`, c.username, c.hostname, c.port, c.name)
+		if errors.Is(e, os.ErrNotExist) {
+			return fmt.Errorf(`configuration file %s not found, SetAPIConfig() first`, s.configFile)
+		}
 	}
-	logDebug(fmt.Sprintf(`database connection %s@%s:%d/%s`, c.username, c.hostname, c.port, c.name))
+	logInfo(fmt.Sprintf(`open config file %s`, s.configFile))
+	s.config = cfg
+
+	dbHostname := cfg.GetStringOr(`database.hostname`, `localhost`)
+	dbPort := cfg.GetIntOr(`database.port`, 3306)
+	dbUsername := cfg.GetString(`database.username`)
+	dbPassword := cfg.GetString(`database.password`)
+	dbName := cfg.GetString(`database.name`)
+	cn, e := db.NewConnection(dbHostname, dbPort, dbUsername, dbPassword, dbName)
+	if e != nil {
+		return fmt.Errorf(`unable to open database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName)
+	}
 	s.cn = cn
+	logInfo(fmt.Sprintf(`database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName))
 
 	addr := `:` + strconv.Itoa(s.Port())
 
+	if e := s.parseAPIConfig(); e != nil {
+		return e
+	}
 	svr := &http.Server{
 		Addr:           addr,
 		Handler:        s,
@@ -76,18 +83,13 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) parseAPIFile() error {
-	js, e := json.ParseFile(s.apiFile)
-	if e != nil {
-		if errors.Is(e, os.ErrNotExist) {
-			return fmt.Errorf(`configuration file %s not found, SetAPIConfig() first`, s.apiFile)
-		}
-	}
+func (s *Server) parseAPIConfig() error {
+	apis := s.config.GetJSONObject(`api`)
 
 	regex := regexp.MustCompile(`^(GET|POST)(?:,(GET|POST)|) (/\S*)$`)
 	s.getMap = make(map[string]*Parameter)
 	s.postMap = make(map[string]*Parameter)
-	for key, val := range js {
+	for key, val := range apis {
 		m := regex.FindStringSubmatch(key)
 		if m == nil {
 			return fmt.Errorf(`invalid API: %s`, key)
@@ -288,16 +290,7 @@ func (s *Server) processParameter(tx *db.Tx, req *Request, resp *json.Object, p 
 	return nil
 }
 
-//SetDatabase ...
-func (s *Server) SetDatabase(hostname string, port int, username string, password string, name string) {
-	s.database.hostname = hostname
-	s.database.port = port
-	s.database.username = username
-	s.database.password = password
-	s.database.name = name
-}
-
-//SetAPIFile ...
-func (s *Server) SetAPIFile(apiFile string) {
-	s.apiFile = apiFile
+//SetConfig ...
+func (s *Server) SetConfig(configFile string) {
+	s.configFile = configFile
 }
