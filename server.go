@@ -20,6 +20,8 @@ type Server struct {
 	getMap  map[string]*Parameter
 	postMap map[string]*Parameter
 
+	middleware []MiddlewareFunc
+
 	//supported auth: jwt
 	authType  string
 	authQuery string
@@ -29,6 +31,13 @@ type Server struct {
 
 	port int
 	cn   *db.Connection
+
+	logger Logger
+}
+
+//Use ...
+func (s *Server) Use(m ...MiddlewareFunc) {
+	s.middleware = append(s.middleware, m...)
 }
 
 //Start ...
@@ -39,7 +48,7 @@ func (s *Server) Start() error {
 			return fmt.Errorf(`configuration file %s not found, SetAPIConfig() first`, s.configFile)
 		}
 	}
-	logInfo(fmt.Sprintf(`open config file %s`, s.configFile))
+	s.logger.D(fmt.Sprintf(`open config file %s`, s.configFile))
 	s.config = cfg
 
 	dbHostname := cfg.GetStringOr(`database.hostname`, `localhost`)
@@ -52,7 +61,7 @@ func (s *Server) Start() error {
 		return fmt.Errorf(`unable to open database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName)
 	}
 	s.cn = cn
-	logInfo(fmt.Sprintf(`database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName))
+	s.logger.D(fmt.Sprintf(`database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName))
 
 	addr := `:` + strconv.Itoa(s.Port())
 	if auth := cfg.GetJSONObject(`auth`); auth != nil {
@@ -76,7 +85,7 @@ func (s *Server) Start() error {
 
 	ch := make(chan error)
 	go func() {
-		logDebug(`starting server at`, addr)
+		s.logger.D(`starting server at`, addr)
 		if e := svr.ListenAndServe(); e != nil {
 			if ch != nil {
 				ch <- e
@@ -85,7 +94,7 @@ func (s *Server) Start() error {
 	}()
 	select {
 	case <-time.After(2 * time.Second):
-		logInfo(`server listening at`, addr)
+		s.logger.I(`server listening at`, addr)
 	case e := <-ch:
 		return e
 	}
@@ -170,7 +179,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			resp.Put(`status`, 99).Put(`message`, `Error`)
 			switch r := r.(type) {
 			case error:
-				logDebug(r)
+				s.logger.D(r)
 				// resp.Put(`message`, r.Error())
 			case string:
 				resp.Put(`message`, r)
@@ -191,21 +200,26 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			panic(`resource not found`)
 		}
-		logDebug(path, p.secure)
+		s.logger.D(path, p.secure)
 
+		// ctx := context{}
+
+		// for _, val := range s.middleware {
+		// 	val(ctx)
+		// }
 		if p.secure {
 			var e error
 			if s.authType == `jwt` {
 				e = jwtAuthorize(s, r, &resp, p)
 			}
 			if e != nil {
-				logError(e)
+				s.logger.E(e)
 				panic(fmt.Sprintf(`authorization for %s failed`, path))
 			}
 		}
 
 		if e := s.process(parseRequest(r), &resp, p); e != nil {
-			logError(e)
+			s.logger.E(e)
 			panic(fmt.Sprintf(`unable to process resource %s`, path))
 		}
 	} //TODO if path not prefix with /
@@ -321,4 +335,17 @@ func (s *Server) processParameter(tx *db.Tx, req *Request, resp *json.Object, p 
 //SetConfig ...
 func (s *Server) SetConfig(configFile string) {
 	s.configFile = configFile
+}
+
+//SetLogger ...
+func (s *Server) SetLogger(logger Logger) {
+	s.logger = logger
+}
+
+//New ...
+func New() *Server {
+	return &Server{
+		logger: new(stdLogger),
+	}
+
 }
