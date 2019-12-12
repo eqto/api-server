@@ -17,7 +17,7 @@ func jwtGenerate(token, secret string) string {
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
-func jwtAuthorize(s *Server, r *http.Request, resp *json.Object, p *Parameter) error {
+func jwtAuthorize(s *Server, r *http.Request, resp *json.Object, p *Route) error {
 	authorization := r.Header.Get(`Authorization`)
 	if len(authorization) < 7 {
 		return fmt.Errorf(`invalid authorization token %s`, authorization)

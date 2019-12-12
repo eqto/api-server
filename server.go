@@ -17,8 +17,8 @@ import (
 
 //Server ...
 type Server struct {
-	getMap  map[string]*Parameter
-	postMap map[string]*Parameter
+	getMap  map[string]*Route
+	postMap map[string]*Route
 
 	middleware []MiddlewareFunc
 
@@ -107,33 +107,33 @@ func (s *Server) parseAPI() error {
 	apis := s.config.GetJSONObject(`api`)
 
 	regex := regexp.MustCompile(`^(GET|POST)(?:,(GET|POST)|) (/\S*)$`)
-	s.getMap = make(map[string]*Parameter)
-	s.postMap = make(map[string]*Parameter)
+	s.getMap = make(map[string]*Route)
+	s.postMap = make(map[string]*Route)
 	for key, val := range apis {
 		m := regex.FindStringSubmatch(key)
 		if m == nil {
 			return fmt.Errorf(`invalid API: %s`, key)
 		}
 
-		var p *Parameter
+		var p *Route
 		if j, ok := val.(map[string]interface{}); ok {
-			p = newParameter(json.Object(j))
+			p = newRoute(json.Object(j))
 		} else {
 			arr, ok := val.([]interface{})
 			if !ok {
 				return fmt.Errorf(`invalid API value for %s`, key)
 			}
-			params := []Parameter{}
+			params := []Route{}
 			for _, val := range arr {
 				if j, ok := val.(map[string]interface{}); ok {
-					p := newParameter(json.Object(j))
+					p := newRoute(json.Object(j))
 					params = append(params, *p)
 				} else {
 					return fmt.Errorf(`invalid API value for %s`, key)
 				}
 			}
 			if len(params) > 0 {
-				p = &Parameter{children: params, secure: params[0].secure}
+				p = &Route{children: params, secure: params[0].secure}
 			}
 		}
 		if p != nil {
@@ -144,7 +144,7 @@ func (s *Server) parseAPI() error {
 	return nil
 }
 
-func (s *Server) registerAPI(method, path string, p *Parameter) {
+func (s *Server) registerAPI(method, path string, p *Route) {
 	switch method {
 	case `GET`:
 		s.getMap[path] = p
@@ -225,7 +225,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} //TODO if path not prefix with /
 }
 
-func (s *Server) process(req *Request, resp *json.Object, p *Parameter) error {
+func (s *Server) process(req *Request, resp *json.Object, p *Route) error {
 	if p.isArray() {
 		tx, e := s.cn.Begin()
 		if e != nil {
@@ -246,7 +246,7 @@ func (s *Server) process(req *Request, resp *json.Object, p *Parameter) error {
 	return nil
 }
 
-func (s *Server) processParameter(tx *db.Tx, req *Request, resp *json.Object, p *Parameter) error {
+func (s *Server) processParameter(tx *db.Tx, req *Request, resp *json.Object, p *Route) error {
 	values := []interface{}{}
 
 	for _, val := range p.params {
