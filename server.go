@@ -17,10 +17,9 @@ import (
 
 //Server ...
 type Server struct {
-	getMap  map[string]*Route
-	postMap map[string]*Route
-
-	middleware []MiddlewareFunc
+	// key: METHOD_path => GET_users POST_users POST_command_users
+	// value: *RouteConfig or []*RouteConfig
+	routeMap map[string][]RouteConfig
 
 	//supported auth: jwt
 	authType  string
@@ -33,11 +32,6 @@ type Server struct {
 	cn   *db.Connection
 
 	logger Logger
-}
-
-//Use ...
-func (s *Server) Use(m ...MiddlewareFunc) {
-	s.middleware = append(s.middleware, m...)
 }
 
 //Start ...
@@ -72,7 +66,7 @@ func (s *Server) Start() error {
 		}
 	}
 
-	if e := s.parseAPI(); e != nil {
+	if e := s.parseJSONRoute(cfg.GetJSONObject(`route`)); e != nil {
 		return e
 	}
 	svr := &http.Server{
@@ -103,55 +97,61 @@ func (s *Server) Start() error {
 	return nil
 }
 
-func (s *Server) parseAPI() error {
-	apis := s.config.GetJSONObject(`api`)
+func (s *Server) addRouteMap(method, path string, routeCfg []RouteConfig) error {
+	if s.routeMap == nil {
+		s.routeMap = make(map[string][]RouteConfig)
+	}
+	method = strings.ToUpper(method)
+	if method != `GET` && method != `POST` {
+		return fmt.Errorf(`unable to register route %s with method %s`, path, method)
+	}
+	s.routeMap[method+` `+path] = routeCfg
+	return nil
+}
 
+func (s *Server) getRouteMap(method, path string) ([]RouteConfig, error) {
+	method = strings.ToUpper(method)
+	if routeCfg, ok := s.routeMap[method+` `+path]; ok {
+		return routeCfg, nil
+	}
+	return nil, fmt.Errorf(`unable to get route %s with method %s`, path, method)
+}
+
+func (s *Server) parseJSONRoute(routes json.Object) error {
 	regex := regexp.MustCompile(`^(GET|POST)(?:,(GET|POST)|) (/\S*)$`)
-	s.getMap = make(map[string]*Route)
-	s.postMap = make(map[string]*Route)
-	for key, val := range apis {
+
+	for key, val := range routes {
 		m := regex.FindStringSubmatch(key)
 		if m == nil {
 			return fmt.Errorf(`invalid API: %s`, key)
 		}
+		configs := []RouteConfig{}
 
-		var p *Route
 		if j, ok := val.(map[string]interface{}); ok {
-			p = newRoute(json.Object(j))
+			configs = append(configs, *newRouteConfig(json.Object(j)))
 		} else {
 			arr, ok := val.([]interface{})
 			if !ok {
 				return fmt.Errorf(`invalid API value for %s`, key)
 			}
-			params := []Route{}
 			for _, val := range arr {
 				if j, ok := val.(map[string]interface{}); ok {
-					p := newRoute(json.Object(j))
-					params = append(params, *p)
+					configs = append(configs, *newRouteConfig(json.Object(j)))
 				} else {
 					return fmt.Errorf(`invalid API value for %s`, key)
 				}
 			}
-			if len(params) > 0 {
-				p = &Route{children: params, secure: params[0].secure}
-			}
 		}
-		if p != nil {
-			s.registerAPI(m[1], m[3], p)
-			s.registerAPI(m[2], m[3], p)
+		if len(configs) > 0 {
+			if e := s.addRouteMap(m[1], m[3], configs); e != nil {
+				s.logger.W(e)
+			}
+			if e := s.addRouteMap(m[2], m[3], configs); e != nil {
+				s.logger.W(e)
+			}
 		}
 	}
 	return nil
-}
-
-func (s *Server) registerAPI(method, path string, p *Route) {
-	switch method {
-	case `GET`:
-		s.getMap[path] = p
-	case `POST`:
-		s.postMap[path] = p
-	}
-
 }
 
 //SetPort ...
@@ -168,10 +168,8 @@ func (s *Server) Port() int {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	resp := json.Object{
-		`status`:  0,
-		`message`: `success`,
-	}
+	req := parseRequest(s, r)
+	resp := &Response{Object: json.Object{`status`: 0, `message`: `success`}}
 
 	defer func() {
 		w.Header().Set(`Content-Type`, `application/json`)
@@ -180,7 +178,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			switch r := r.(type) {
 			case error:
 				s.logger.D(r)
-				// resp.Put(`message`, r.Error())
 			case string:
 				resp.Put(`message`, r)
 			}
@@ -189,147 +186,60 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Write(resp.ToBytes())
 	}()
 
-	m := s.postMap
-	if r.Method == http.MethodGet {
-		m = s.getMap
-	}
-
 	path := r.URL.Path
 	if strings.HasPrefix(path, `/`) {
-		p, ok := m[path]
+		configs, ok := s.routeMap[r.Method+` `+r.URL.Path]
 		if !ok {
 			panic(`resource not found`)
 		}
-		s.logger.D(path, p.secure)
 
-		// ctx := context{}
-
-		// for _, val := range s.middleware {
-		// 	val(ctx)
-		// }
-		if p.secure {
-			var e error
-			if s.authType == `jwt` {
-				e = jwtAuthorize(s, r, &resp, p)
-			}
-			if e != nil {
-				s.logger.E(e)
-				panic(fmt.Sprintf(`authorization for %s failed`, path))
-			}
-		}
-
-		if e := s.process(parseRequest(r), &resp, p); e != nil {
-			s.logger.E(e)
-			panic(fmt.Sprintf(`unable to process resource %s`, path))
-		}
-	} //TODO if path not prefix with /
-}
-
-func (s *Server) process(req *Request, resp *json.Object, p *Route) error {
-	if p.isArray() {
 		tx, e := s.cn.Begin()
 		if e != nil {
-			return e
+			panic(e)
 		}
-		defer tx.Commit()
+		defer tx.MustRecover()
 
-		for _, val := range p.children {
-			e := s.processParameter(tx, req, resp, &val)
-			if e != nil {
-				tx.Rollback()
-				return e
+		for _, val := range configs {
+			if val.secure {
+				if e := req.Authenticate(); e != nil {
+					panic(e)
+				}
+			}
+			ctx := Context{req: req, resp: resp, tx: tx}
+			if val.routeFunc != nil {
+				if e := val.routeFunc(ctx); e != nil {
+					panic(e)
+				}
+			} else {
+				if e := val.process(ctx); e != nil {
+					panic(e)
+				}
 			}
 		}
 	} else {
-		return s.processParameter(s.cn.Tx(nil), req, resp, p)
+
+	}
+}
+
+//Route ...
+func (s *Server) Route(method []string, path string, routeFunc RouteFunc) error {
+	routes := []RouteConfig{RouteConfig{routeFunc: routeFunc}}
+	for _, val := range method {
+		if e := s.addRouteMap(val, path, routes); e != nil {
+			return e
+		}
 	}
 	return nil
 }
 
-func (s *Server) processParameter(tx *db.Tx, req *Request, resp *json.Object, p *Route) error {
-	values := []interface{}{}
+//GET ...
+func (s *Server) GET(path string, routeFunc RouteFunc) error {
+	return s.Route([]string{MethodGet}, path, routeFunc)
+}
 
-	for _, val := range p.params {
-		values = append(values, req.MustString(val))
-	}
-	qb := *p.qb
-
-	if filter := req.GetJSONObject(`filter`); filter != nil {
-		for keyFilter := range filter {
-			valFilter := filter.GetJSONObject(keyFilter)
-			value := valFilter.GetString(`value`)
-
-			switch valFilter.GetString(`type`) {
-			case `input`:
-				qb.WhereOp(keyFilter, ` LIKE `)
-				values = append(values, value+`%`)
-			case `number`:
-				value = strings.TrimSpace(value)
-				if strings.HasPrefix(value, `<`) {
-					value = strings.TrimSpace(value[1:])
-					qb.WhereOp(keyFilter, ` < `)
-				} else if strings.HasPrefix(value, `>`) {
-					value = strings.TrimSpace(value[1:])
-					qb.WhereOp(keyFilter, ` > `)
-				}
-				values = append(values, value)
-			default:
-				qb.Where(keyFilter)
-				values = append(values, value)
-			}
-		}
-	}
-	switch p.queryType {
-	case `INSERT`:
-		rs, e := tx.Exec(p.query, values...)
-		if e != nil {
-			return e
-		}
-		id, e := rs.LastInsertID()
-		if e != nil {
-			return e
-		}
-		p.putOutput(req, resp, id)
-
-	case `UPDATE`:
-
-	case `GET`:
-		fallthrough
-	case `SELECT`:
-		page := req.GetInt(`page`)
-
-		maxRows := req.GetInt(`max_rows`)
-		if maxRows == 0 {
-			maxRows = qb.LimitLength()
-			if maxRows == 0 {
-				maxRows = 100
-			}
-		}
-		if page >= 1 {
-			qb.Limit((page-1)*maxRows, maxRows)
-		}
-		active, direction := req.GetString(`sort.active`), req.GetString(`sort.direction`)
-
-		if active != `` && direction != `` {
-			qb.Order(active, direction)
-		}
-
-		if p.queryType == `GET` {
-			qb.Limit(qb.LimitStart(), 1)
-			rs, e := tx.Get(qb.ToSQL(), values...)
-			if e != nil {
-				return e
-			}
-			p.putOutput(req, resp, rs)
-		} else {
-			rs, e := tx.Select(qb.ToSQL(), values...)
-			if e != nil {
-				return e
-			}
-			p.putOutput(req, resp, rs)
-		}
-	}
-	return nil
+//POST ...
+func (s *Server) POST(path string, routeFunc RouteFunc) error {
+	return s.Route([]string{MethodPost}, path, routeFunc)
 }
 
 //SetConfig ...
@@ -347,5 +257,4 @@ func New() *Server {
 	return &Server{
 		logger: new(stdLogger),
 	}
-
 }

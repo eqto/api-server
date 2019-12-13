@@ -1,20 +1,31 @@
 package api
 
 import (
-	"net/http"
+	"context"
+
+	"gitlab.com/tuxer/go-db"
 )
 
 //Context ...
-type Context interface {
-	Request() *http.Request
+type Context struct {
+	context.Context
+
+	req  *Request
+	resp *Response
+	tx   *db.Tx
 }
 
-type context struct {
-	Context
-
-	r *http.Request
+//Request ...
+func (c *Context) Request() *Request {
+	return c.req
 }
 
-func (c *context) Request() *http.Request {
-	return c.r
+//Response ...
+func (c *Context) Response() *Response {
+	return c.resp
+}
+
+//Tx ...
+func (c *Context) Tx() *db.Tx {
+	return c.tx
 }

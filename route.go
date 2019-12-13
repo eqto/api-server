@@ -9,8 +9,11 @@ import (
 	"gitlab.com/tuxer/go-json"
 )
 
-//Parameter ...
-type Route struct {
+//RouteFunc ...
+type RouteFunc func(ctx Context) error
+
+//RouteConfig ...
+type RouteConfig struct {
 	query     string
 	queryType string
 	qb        *db.QueryBuilder
@@ -18,14 +21,10 @@ type Route struct {
 	output    string
 	secure    bool
 
-	children []Route
+	routeFunc RouteFunc
 }
 
-func (r *Route) isArray() bool {
-	return r.children != nil
-}
-
-func (r *Route) putOutput(req *Request, resp *json.Object, value interface{}) {
+func (r *RouteConfig) putOutput(req *Request, resp *Response, value interface{}) {
 	if strings.HasPrefix(r.output, `$`) {
 		req.Put(r.output, value)
 	} else {
@@ -33,12 +32,100 @@ func (r *Route) putOutput(req *Request, resp *json.Object, value interface{}) {
 	}
 }
 
-func newRoute(js json.Object) *Route {
-	r := &Route{
-		query:     strings.TrimSpace(js.GetString(`query`)),
-		queryType: strings.TrimSpace(js.GetString(`query_type`)),
-		output:    strings.TrimSpace(js.GetStringOr(`output`, `data`)),
-		secure:    js.GetBoolean(`secure`),
+func (r *RouteConfig) process(ctx Context) error {
+	req, resp, tx := ctx.Request(), ctx.Response(), ctx.Tx()
+
+	values := []interface{}{}
+
+	for _, val := range r.params {
+		values = append(values, req.MustString(val))
+	}
+	qb := *r.qb
+
+	if filter := req.GetJSONObject(`filter`); filter != nil {
+		for keyFilter := range filter {
+			valFilter := filter.GetJSONObject(keyFilter)
+			value := valFilter.GetString(`value`)
+
+			switch valFilter.GetString(`type`) {
+			case `input`:
+				qb.WhereOp(keyFilter, ` LIKE `)
+				values = append(values, value+`%`)
+			case `number`:
+				value = strings.TrimSpace(value)
+				if strings.HasPrefix(value, `<`) {
+					value = strings.TrimSpace(value[1:])
+					qb.WhereOp(keyFilter, ` < `)
+				} else if strings.HasPrefix(value, `>`) {
+					value = strings.TrimSpace(value[1:])
+					qb.WhereOp(keyFilter, ` > `)
+				}
+				values = append(values, value)
+			default:
+				qb.Where(keyFilter)
+				values = append(values, value)
+			}
+		}
+	}
+	switch r.queryType {
+	case `INSERT`:
+		rs, e := tx.Exec(r.query, values...)
+		if e != nil {
+			return e
+		}
+		id, e := rs.LastInsertID()
+		if e != nil {
+			return e
+		}
+		r.putOutput(req, resp, id)
+
+	case `UPDATE`:
+
+	case `GET`:
+		fallthrough
+	case `SELECT`:
+		page := req.GetInt(`page`)
+
+		maxRows := req.GetInt(`max_rows`)
+		if maxRows == 0 {
+			maxRows = qb.LimitLength()
+			if maxRows == 0 {
+				maxRows = 100
+			}
+		}
+		if page >= 1 {
+			qb.Limit((page-1)*maxRows, maxRows)
+		}
+		active, direction := req.GetString(`sort.active`), req.GetString(`sort.direction`)
+
+		if active != `` && direction != `` {
+			qb.Order(active, direction)
+		}
+
+		if r.queryType == `GET` {
+			qb.Limit(qb.LimitStart(), 1)
+			rs, e := tx.Get(qb.ToSQL(), values...)
+			if e != nil {
+				return e
+			}
+			r.putOutput(req, resp, rs)
+		} else {
+			rs, e := tx.Select(qb.ToSQL(), values...)
+			if e != nil {
+				return e
+			}
+			r.putOutput(req, resp, rs)
+		}
+	}
+	return nil
+}
+
+func newRouteConfig(cfg json.Object) *RouteConfig {
+	r := &RouteConfig{
+		query:     strings.TrimSpace(cfg.GetString(`query`)),
+		queryType: strings.TrimSpace(cfg.GetString(`query_type`)),
+		output:    strings.TrimSpace(cfg.GetStringOr(`output`, `data`)),
+		secure:    cfg.GetBoolean(`secure`),
 	}
 	if r.queryType == `` {
 		str := strings.SplitN(r.query, ` `, 2)
@@ -51,13 +138,12 @@ func newRoute(js json.Object) *Route {
 	r.queryType = strings.ToUpper(r.queryType)
 	r.qb = db.ParseQuery(r.query)
 
-	if params := js.GetString(`params`); params != `` {
+	if params := cfg.GetString(`params`); params != `` {
 		split := strings.Split(params, `,`)
 		for key, val := range split {
 			split[key] = strings.TrimSpace(val)
 		}
 		r.params = split
 	}
-
 	return r
 }

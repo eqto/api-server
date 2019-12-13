@@ -1,5 +1,14 @@
 package api
 
+import (
+	"net/http"
+)
+
+const (
+	MethodGet  = http.MethodGet
+	MethodPost = http.MethodPost
+)
+
 //Start ...
 // func Start() (*Server, error) {
 // 	srv := new(Server)
@@ -8,10 +17,8 @@ package api
 // }
 
 type (
-	// MiddlewareFunc func(HandlerFunc) HandlerFunc
+// MiddlewareFunc func(HandlerFunc) HandlerFunc
 
-	//MiddlewareFunc ...
-	MiddlewareFunc func(Context) error
-	//HandlerFunc ...
-	// HandlerFunc func(Context) error
+//HandlerFunc ...
+// HandlerFunc func(Context) error
 )
