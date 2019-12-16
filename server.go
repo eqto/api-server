@@ -146,8 +146,10 @@ func (s *Server) parseJSONRoute(routes json.Object) error {
 			if e := s.addRouteMap(m[1], m[3], configs); e != nil {
 				s.logger.W(e)
 			}
-			if e := s.addRouteMap(m[2], m[3], configs); e != nil {
-				s.logger.W(e)
+			if m[2] != `` {
+				if e := s.addRouteMap(m[2], m[3], configs); e != nil {
+					s.logger.W(e)
+				}
 			}
 		}
 	}
