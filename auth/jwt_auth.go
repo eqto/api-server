@@ -1,4 +1,4 @@
-package api
+package auth
 
 import (
 	"crypto/hmac"
@@ -8,16 +8,24 @@ import (
 	"net/http"
 	"strings"
 
+	"gitlab.com/tuxer/go-db"
+
 	"gitlab.com/tuxer/go-json"
 )
 
-func jwtGenerate(token, secret string) string {
-	mac := hmac.New(sha256.New, []byte(secret))
-	mac.Write([]byte(token))
-	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+//JWTAuth ...
+type JWTAuth struct {
+	Interface
+	Query string
 }
 
-func jwtAuthorize(s *Server, r *http.Request) error {
+//Type ...
+func (j *JWTAuth) Type() string {
+	return TypeJWT
+}
+
+//Authenticate ...
+func (j *JWTAuth) Authenticate(tx *db.Tx, r *http.Request) error {
 	authorization := r.Header.Get(`Authorization`)
 	if len(authorization) < 7 {
 		return fmt.Errorf(`invalid authorization token %s`, authorization)
@@ -29,7 +37,7 @@ func jwtAuthorize(s *Server, r *http.Request) error {
 		return e
 	}
 	jsPayload := json.Parse(b)
-	rs, e := s.cn.Get(s.authQuery, jsPayload.GetString(`iss`))
+	rs, e := tx.Get(j.Query, jsPayload.GetString(`iss`))
 	if e != nil {
 		return e
 	}
@@ -40,7 +48,10 @@ func jwtAuthorize(s *Server, r *http.Request) error {
 	for key := range rs {
 		secret = rs.String(key)
 	}
-	sig := jwtGenerate(jwt[0]+`.`+jwt[1], secret)
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write([]byte(jwt[0] + `.` + jwt[1]))
+	sig := base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
 	if sig != jwt[2] {
 		return fmt.Errorf(`different signature %s %s`, sig, jwt[2])
 	}

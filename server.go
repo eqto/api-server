@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"gitlab.com/tuxer/go-api/auth"
+
 	"gitlab.com/tuxer/go-json"
 
 	"gitlab.com/tuxer/go-db"
@@ -21,9 +23,11 @@ type Server struct {
 	// value: *RouteConfig or []*RouteConfig
 	routeMap map[string][]RouteConfig
 
+	authManager *auth.Manager
+
 	//supported auth: jwt
-	authType  string
-	authQuery string
+	// authType  string
+	// authQuery string
 
 	configFile string
 	config     json.Object
@@ -58,11 +62,15 @@ func (s *Server) Start() error {
 	s.logger.D(fmt.Sprintf(`database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName))
 
 	addr := `:` + strconv.Itoa(s.Port())
-	if auth := cfg.GetJSONObject(`auth`); auth != nil {
-		s.authType = auth.GetStringOr(`type`, `jwt`)
-		s.authQuery = auth.GetString(`query`)
-		if s.authQuery == `` {
-			return fmt.Errorf(`incorrect configuration: %s`, `auth.query`)
+	if jsAuth := cfg.GetJSONObject(`auth`); jsAuth != nil {
+		for key := range jsAuth {
+			val := jsAuth.GetJSONObject(key)
+			switch val.GetString(`type`) {
+			case auth.TypeJWT:
+				s.authManager.Set(key, &auth.JWTAuth{Query: val.GetString(`query`)})
+			default:
+				s.logger.W(fmt.Sprintf(`authentication type %s not supported or not loaded yet`, key))
+			}
 		}
 	}
 
@@ -170,7 +178,6 @@ func (s *Server) Port() int {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	req := parseRequest(s, r)
 	resp := &Response{Object: json.Object{`status`: 0, `message`: `success`}}
 
 	defer func() {
@@ -201,10 +208,14 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		defer tx.MustRecover()
 
+		req := parseRequest(s, r, tx)
+
 		for _, val := range configs {
-			if val.secure {
-				if e := req.Authenticate(); e != nil {
-					panic(e)
+			if val.authType != `` {
+				if a := s.authManager.Get(val.authType); a != nil {
+					if e := a.Authenticate(tx, r); e != nil {
+						panic(e)
+					}
 				}
 			}
 			ctx := Context{req: req, resp: resp, tx: tx}

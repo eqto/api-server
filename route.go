@@ -19,7 +19,7 @@ type RouteConfig struct {
 	qb        *db.QueryBuilder
 	params    []string
 	output    string
-	secure    bool
+	authType  string
 
 	routeFunc RouteFunc
 }
@@ -125,7 +125,7 @@ func newRouteConfig(cfg json.Object) *RouteConfig {
 		query:     strings.TrimSpace(cfg.GetString(`query`)),
 		queryType: strings.TrimSpace(cfg.GetString(`query_type`)),
 		output:    strings.TrimSpace(cfg.GetStringOr(`output`, `data`)),
-		secure:    cfg.GetBoolean(`secure`),
+		authType:  cfg.GetString(`auth`),
 	}
 	if r.queryType == `` {
 		str := strings.SplitN(r.query, ` `, 2)
