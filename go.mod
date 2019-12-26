@@ -9,8 +9,7 @@ replace gitlab.com/tuxer/go-db => /Users/tuxer/Projects/go/go-db
 replace gitlab.com/tuxer/go-json => /Users/tuxer/Projects/go/go-json
 
 require (
-	gitlab.com/tuxer/go-db v0.0.0-20191226092711-7590b3e0beca
-	gitlab.com/tuxer/go-json v0.0.0-20191205071804-11fe6c9c1e64
+	gitlab.com/tuxer/go-db v0.0.0-20191030051519-cd407f09d6db
+	gitlab.com/tuxer/go-json v0.0.0-00010101000000-000000000000
 	gitlab.com/tuxer/go-logger v0.0.0-20181117123619-174e86aaabc1
-	google.golang.org/appengine v1.6.5 // indirect
 )
