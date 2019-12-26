@@ -38,6 +38,11 @@ func (r *RouteConfig) process(ctx Context) error {
 	values := []interface{}{}
 
 	for _, val := range r.params {
+		if strings.HasPrefix(val, `$`) {
+			// j := req.GetJSONObject(`$path`)
+			// println(reflect.ValueOf(reflect.ValueOf(j.Get(`id`))).String())
+			// println(reflect.TypeOf(j.Get(`id`)).Kind() == reflect.Ptr)
+		}
 		values = append(values, req.MustString(val))
 	}
 	qb := *r.qb

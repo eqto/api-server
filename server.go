@@ -25,10 +25,6 @@ type Server struct {
 
 	authManager *auth.Manager
 
-	//supported auth: jwt
-	// authType  string
-	// authQuery string
-
 	configFile string
 	config     json.Object
 
@@ -43,7 +39,7 @@ func (s *Server) Start() error {
 	cfg, e := json.ParseFile(s.configFile)
 	if e != nil {
 		if errors.Is(e, os.ErrNotExist) {
-			return fmt.Errorf(`configuration file %s not found, SetAPIConfig() first`, s.configFile)
+			return fmt.Errorf(`configuration file %s not found, SetConfig() first`, s.configFile)
 		}
 	}
 	s.logger.D(fmt.Sprintf(`open config file %s`, s.configFile))
@@ -179,6 +175,7 @@ func (s *Server) Port() int {
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp := &Response{Object: json.Object{`status`: 0, `message`: `success`}}
+	var config RouteConfig
 
 	defer func() {
 		w.Header().Set(`Content-Type`, `application/json`)
@@ -186,7 +183,8 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			resp.Put(`status`, 99).Put(`message`, `Error`)
 			switch r := r.(type) {
 			case error:
-				s.logger.D(r)
+				resp.Put(`message`, parseError(r))
+				s.logger.D(r, config.query)
 			case string:
 				resp.Put(`message`, r)
 			}
@@ -210,21 +208,22 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		req := parseRequest(s, r, tx)
 
-		for _, val := range configs {
-			if val.authType != `` {
-				if a := s.authManager.Get(val.authType); a != nil {
+		for _, config = range configs {
+			if config.authType != `` {
+				if a := s.authManager.Get(config.authType); a != nil {
 					if e := a.Authenticate(tx, r); e != nil {
 						panic(e)
 					}
 				}
 			}
 			ctx := Context{req: req, resp: resp, tx: tx}
-			if val.routeFunc != nil {
-				if e := val.routeFunc(ctx); e != nil {
+
+			if config.routeFunc != nil {
+				if e := config.routeFunc(ctx); e != nil {
 					panic(e)
 				}
 			} else {
-				if e := val.process(ctx); e != nil {
+				if e := config.process(ctx); e != nil {
 					panic(e)
 				}
 			}
@@ -263,6 +262,7 @@ func (s *Server) SetConfig(configFile string) {
 //SetLogger ...
 func (s *Server) SetLogger(logger Logger) {
 	s.logger = logger
+	s.logger.SetCallDepth(0)
 }
 
 //New ...
