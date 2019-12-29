@@ -1,6 +1,7 @@
 package api
 
 import (
+	"reflect"
 	"regexp"
 	"strings"
 
@@ -25,10 +26,25 @@ type RouteConfig struct {
 }
 
 func (r *RouteConfig) putOutput(req *Request, resp *Response, value interface{}) {
+	current := req.Get(r.output)
+
+	//3 lines below to convert any value to recognized value
+	js := make(json.Object)
+	js.Put(r.output, value)
+	new := js.Get(r.output)
+
+	if reflect.TypeOf(current) == reflect.TypeOf(new) {
+		if n, ok := new.(map[string]interface{}); ok {
+			for key, val := range n {
+				current.(map[string]interface{})[key] = val
+			}
+			new = current
+		}
+	}
 	if strings.HasPrefix(r.output, `$`) {
-		req.Put(r.output, value)
+		req.Put(r.output, new)
 	} else {
-		resp.Put(r.output, value)
+		resp.Put(r.output, new)
 	}
 }
 
