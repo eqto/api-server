@@ -96,6 +96,15 @@ func (r *RouteConfig) process(ctx Context) error {
 		r.putOutput(req, resp, id)
 
 	case `UPDATE`:
+		rs, e := tx.Exec(r.query, values...)
+		if e != nil {
+			return e
+		}
+		rows, e := rs.RowsAffected()
+		if e != nil {
+			return e
+		}
+		r.putOutput(req, resp, rows)
 
 	case `GET`:
 		fallthrough
