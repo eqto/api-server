@@ -24,23 +24,6 @@ type Request struct {
 	server *Server
 }
 
-// //Path ...
-// func (r Request) Path() string {
-// 	return r.httpReq.URL.Path
-// }
-
-// //Authenticate ...
-// func (r Request) Authenticate(auth auth.Interface) error {
-// 	if auth != nil {
-// 		if a := r.server.authManager.Get(auth.Type()); a != nil {
-// 			if e := a.Authenticate(r.tx, r.httpReq); e != nil {
-// 				return e
-// 			}
-// 		}
-// 	}
-// 	return nil
-// }
-
 //MustString ...
 func (r Request) MustString(key string) string {
 	val := r.GetStringNull(key)

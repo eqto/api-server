@@ -1,13 +1,15 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
 	"regexp"
-	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"gitlab.com/tuxer/go-api/auth"
@@ -17,147 +19,182 @@ import (
 	"gitlab.com/tuxer/go-db"
 )
 
+//Func ...
+type Func func(ctx *Context) (interface{}, error)
+
 //Server ...
 type Server struct {
-	// key: METHOD_path => GET_users POST_users POST_command_users
-	// value: *RouteConfig or []*RouteConfig
-	routeMap map[string][]RouteConfig
+	port    int
+	healthy int32
 
-	authManager *auth.Manager
+	routePathMap map[string]*RoutePath
+	authManager  *auth.Manager
 
 	configFile string
 	config     json.Object
-
-	port int
-	cn   *db.Connection
+	cn         *db.Connection
 
 	logger Logger
+
+	funcMap map[string]Func
 }
 
-//Start ...
-func (s *Server) Start() error {
-	cfg, e := json.ParseFile(s.configFile)
+//OpenDatabase ...
+func (s *Server) OpenDatabase(hostname string, port int, username, password, name string) error {
+	cn, e := db.NewConnection(hostname, port, username, password, name)
 	if e != nil {
-		if errors.Is(e, os.ErrNotExist) {
-			return fmt.Errorf(`configuration file %s not found, SetConfig() first`, s.configFile)
-		}
-	}
-	s.logger.D(fmt.Sprintf(`open config file %s`, s.configFile))
-	s.config = cfg
-
-	dbHostname := cfg.GetStringOr(`database.hostname`, `localhost`)
-	dbPort := cfg.GetIntOr(`database.port`, 3306)
-	dbUsername := cfg.GetString(`database.username`)
-	dbPassword := cfg.GetString(`database.password`)
-	dbName := cfg.GetString(`database.name`)
-	cn, e := db.NewConnection(dbHostname, dbPort, dbUsername, dbPassword, dbName)
-	if e != nil {
-		return fmt.Errorf(`unable to open database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName)
+		return fmt.Errorf(`unable to open database connection %s@%s:%d/%s`, username, hostname, port, name)
 	}
 	s.cn = cn
-	s.logger.D(fmt.Sprintf(`database connection %s@%s:%d/%s`, dbUsername, dbHostname, dbPort, dbName))
+	s.logger.D(fmt.Sprintf(`database connection %s@%s:%d/%s`, username, hostname, port, name))
 
-	addr := `:` + strconv.Itoa(s.Port())
-	if jsAuth := cfg.GetJSONObject(`auth`); jsAuth != nil {
-		for key := range jsAuth {
-			val := jsAuth.GetJSONObject(key)
-			switch val.GetString(`type`) {
-			case auth.TypeJWT:
-				s.authManager.Set(key, &auth.JWTAuth{Query: val.GetString(`query`)})
-			default:
-				s.logger.W(fmt.Sprintf(`authentication type %s not supported or not loaded yet`, key))
-			}
-		}
-	}
-
-	if e := s.parseJSONRoute(cfg.GetJSONObject(`route`)); e != nil {
-		return e
-	}
-	svr := &http.Server{
-		Addr:           addr,
-		Handler:        s,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
-
-	ch := make(chan error)
-	go func() {
-		s.logger.D(`starting server at`, addr)
-		if e := svr.ListenAndServe(); e != nil {
-			if ch != nil {
-				ch <- e
-			}
-		}
-	}()
-	select {
-	case <-time.After(2 * time.Second):
-		s.logger.I(`server listening at`, addr)
-	case e := <-ch:
-		return e
-	}
-
-	ch = nil
 	return nil
 }
 
-func (s *Server) addRouteMap(method, path string, routeCfg []RouteConfig) error {
-	if s.routeMap == nil {
-		s.routeMap = make(map[string][]RouteConfig)
+//AddFunc ...
+func (s *Server) AddFunc(name string, f Func) {
+	if s.funcMap == nil {
+		s.funcMap = make(map[string]Func)
 	}
-	method = strings.ToUpper(method)
-	if method != `GET` && method != `POST` {
-		return fmt.Errorf(`unable to register route %s with method %s`, path, method)
-	}
-	s.routeMap[method+` `+path] = routeCfg
-	return nil
+	s.funcMap[name] = f
+	s.logger.D(fmt.Sprintf(`add api server function: %s`, name))
 }
 
-func (s *Server) getRouteMap(method, path string) ([]RouteConfig, error) {
-	method = strings.ToUpper(method)
-	if routeCfg, ok := s.routeMap[method+` `+path]; ok {
-		return routeCfg, nil
-	}
-	return nil, fmt.Errorf(`unable to get route %s with method %s`, path, method)
-}
-
-func (s *Server) parseJSONRoute(routes json.Object) error {
+//AddPaths ...
+func (s *Server) AddPaths(paths json.Object) error {
 	regex := regexp.MustCompile(`^(GET|POST)(?:,(GET|POST)|) (/\S*)$`)
 
-	for key, val := range routes {
+	for key, path := range paths {
 		m := regex.FindStringSubmatch(key)
 		if m == nil {
 			return fmt.Errorf(`invalid API: %s`, key)
 		}
-		configs := []RouteConfig{}
+		routePath := new(RoutePath)
 
-		if j, ok := val.(map[string]interface{}); ok {
-			configs = append(configs, *newRouteConfig(json.Object(j)))
+		if j, ok := path.(map[string]interface{}); ok {
+			routePath.AddRoute(RouteFromJSON(json.Object(j)))
 		} else {
-			arr, ok := val.([]interface{})
+			arr, ok := path.([]interface{})
 			if !ok {
 				return fmt.Errorf(`invalid API value for %s`, key)
 			}
 			for _, val := range arr {
 				if j, ok := val.(map[string]interface{}); ok {
-					configs = append(configs, *newRouteConfig(json.Object(j)))
+					routePath.AddRoute(RouteFromJSON(json.Object(j)))
 				} else {
 					return fmt.Errorf(`invalid API value for %s`, key)
 				}
 			}
 		}
-		if len(configs) > 0 {
-			if e := s.addRouteMap(m[1], m[3], configs); e != nil {
+		if len(routePath.Routes()) > 0 {
+			if e := s.addRoutePathMap(m[1], m[3], routePath); e != nil {
 				s.logger.W(e)
 			}
 			if m[2] != `` {
-				if e := s.addRouteMap(m[2], m[3], configs); e != nil {
+				if e := s.addRoutePathMap(m[2], m[3], routePath); e != nil {
 					s.logger.W(e)
 				}
 			}
 		}
 	}
 	return nil
+}
+
+//Start ...
+func (s *Server) Start() error {
+	if s.configFile != `` {
+		cfg, e := json.ParseFile(s.configFile)
+		if e != nil {
+			if errors.Is(e, os.ErrNotExist) {
+				return fmt.Errorf(`configuration file %s not found, SetConfig() first`, s.configFile)
+			}
+		}
+		s.logger.D(fmt.Sprintf(`open config file %s`, s.configFile))
+		s.config = cfg
+		if s.cn == nil {
+			dbHostname := cfg.GetStringOr(`database.hostname`, `localhost`)
+			dbPort := cfg.GetIntOr(`database.port`, 3306)
+			dbUsername := cfg.GetString(`database.username`)
+			dbPassword := cfg.GetString(`database.password`)
+			dbName := cfg.GetString(`database.name`)
+			if e := s.OpenDatabase(dbHostname, dbPort, dbUsername, dbPassword, dbName); e != nil {
+				return e
+			}
+		}
+		if jsAuth := cfg.GetJSONObject(`auth`); jsAuth != nil {
+			for key := range jsAuth {
+				val := jsAuth.GetJSONObject(key)
+				switch val.GetString(`type`) {
+				case auth.TypeJWT:
+					s.authManager.Set(key, &auth.JWTAuth{Query: val.GetString(`query`)})
+				default:
+					s.logger.W(fmt.Sprintf(`authentication type %s not supported or not loaded yet`, key))
+				}
+			}
+		}
+		if e := s.AddPaths(cfg.GetJSONObject(`paths`)); e != nil {
+			return e
+		}
+	}
+
+	httpServer := &http.Server{
+		Addr:           fmt.Sprintf(`:%d`, s.port),
+		Handler:        newServeMux(s),
+		ReadTimeout:    5 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		IdleTimeout:    15 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+
+	done := make(chan bool)
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+
+	go func() {
+		<-quit
+		s.logger.I(`Server shutting down...`)
+		atomic.StoreInt32(&s.healthy, 0)
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		httpServer.SetKeepAlivesEnabled(false)
+		if err := httpServer.Shutdown(ctx); err != nil {
+			s.logger.W(fmt.Sprintf(`Gracefully shutdown failed. %v`, err))
+		}
+		close(done)
+	}()
+	s.logger.I(fmt.Sprintf(`Server listening at %d`, s.port))
+
+	atomic.StoreInt32(&s.healthy, 1)
+	if e := httpServer.ListenAndServe(); e != nil && e != http.ErrServerClosed {
+		s.logger.W(fmt.Sprintf(`Error starting server. %v`, e))
+	}
+
+	<-done
+	s.logger.I(`Server stopped`)
+	return nil
+
+}
+
+func (s *Server) addRoutePathMap(method, path string, routePath *RoutePath) error {
+	if s.routePathMap == nil {
+		s.routePathMap = make(map[string]*RoutePath)
+	}
+	method = strings.ToUpper(method)
+	if method != `GET` && method != `POST` {
+		return fmt.Errorf(`unable to register route %s with method %s`, path, method)
+	}
+	s.routePathMap[method+` `+path] = routePath
+	return nil
+}
+
+func (s *Server) getRouteMap(method, path string) (*RoutePath, error) {
+	method = strings.ToUpper(method)
+	if routePath, ok := s.routePathMap[method+` `+path]; ok {
+		return routePath, nil
+	}
+	return nil, fmt.Errorf(`unable to get route %s with method %s`, path, method)
 }
 
 //SetPort ...
@@ -173,71 +210,13 @@ func (s *Server) Port() int {
 	return s.port
 }
 
-func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	resp := &Response{Object: json.Object{`status`: 0, `message`: `success`}}
-	var config RouteConfig
-
-	defer func() {
-		w.Header().Set(`Content-Type`, `application/json`)
-		if r := recover(); r != nil {
-			resp.Put(`status`, 99).Put(`message`, `Error`)
-			switch r := r.(type) {
-			case error:
-				resp.Put(`message`, parseError(r))
-				s.logger.D(r, config.query)
-			case string:
-				resp.Put(`message`, r)
-			}
-			w.WriteHeader(http.StatusBadRequest)
-		}
-		w.Write(resp.ToBytes())
-	}()
-
-	path := r.URL.Path
-	if strings.HasPrefix(path, `/`) {
-		configs, ok := s.routeMap[r.Method+` `+r.URL.Path]
-		if !ok {
-			panic(`resource not found`)
-		}
-
-		tx, e := s.cn.Begin()
-		if e != nil {
-			panic(e)
-		}
-		defer tx.MustRecover()
-
-		req := parseRequest(s, r, tx)
-
-		for _, config = range configs {
-			if config.authType != `` {
-				if a := s.authManager.Get(config.authType); a != nil {
-					if e := a.Authenticate(tx, r); e != nil {
-						panic(e)
-					}
-				}
-			}
-			ctx := Context{req: req, resp: resp, tx: tx}
-
-			if config.routeFunc != nil {
-				if e := config.routeFunc(ctx); e != nil {
-					panic(e)
-				}
-			} else {
-				if e := config.process(ctx); e != nil {
-					panic(e)
-				}
-			}
-		}
-	} else {
-
-	}
-}
-
 //Route ...
 func (s *Server) Route(method []string, path string, routeFunc RouteFunc) error {
-	routes := []RouteConfig{RouteConfig{routeFunc: routeFunc}}
+	routePath := new(RoutePath)
+	routePath.AddRoute(&Route{routeFunc: routeFunc})
+
 	for _, val := range method {
-		if e := s.addRouteMap(val, path, routes); e != nil {
+		if e := s.addRoutePathMap(val, path, routePath); e != nil {
 			return e
 		}
 	}
@@ -266,8 +245,9 @@ func (s *Server) SetLogger(logger Logger) {
 }
 
 //New ...
-func New() *Server {
+func New(port int) *Server {
 	return &Server{
+		port:   port,
 		logger: new(stdLogger),
 	}
 }

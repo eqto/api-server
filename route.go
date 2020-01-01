@@ -1,7 +1,7 @@
 package api
 
 import (
-	"reflect"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -11,10 +11,10 @@ import (
 )
 
 //RouteFunc ...
-type RouteFunc func(ctx Context) error
+type RouteFunc func(ctx *Context) (interface{}, error)
 
-//RouteConfig ...
-type RouteConfig struct {
+//Route ...
+type Route struct {
 	query     string
 	queryType string
 	qb        *db.QueryBuilder
@@ -25,36 +25,21 @@ type RouteConfig struct {
 	routeFunc RouteFunc
 }
 
-func (r *RouteConfig) putOutput(req *Request, resp *Response, value interface{}) {
-	current := req.Get(r.output)
+func (r *Route) process(ctx *Context) (interface{}, error) {
+	req := ctx.Request()
 
-	//3 lines below to convert any value to recognized value
-	js := make(json.Object)
-	js.Put(r.output, value)
-	new := js.Get(r.output)
-
-	if reflect.TypeOf(current) == reflect.TypeOf(new) {
-		if n, ok := new.(map[string]interface{}); ok {
-			for key, val := range n {
-				current.(map[string]interface{})[key] = val
-			}
-			new = current
-		}
+	if r.queryType == `FUNC` {
+		return ctx.execFunc(r.query)
 	}
-	if strings.HasPrefix(r.output, `$`) {
-		req.Put(r.output, new)
-	} else {
-		resp.Put(r.output, new)
-	}
-}
-
-func (r *RouteConfig) process(ctx Context) error {
-	req, resp, tx := ctx.Request(), ctx.Response(), ctx.Tx()
 
 	values := []interface{}{}
 
-	for _, val := range r.params {
-		values = append(values, req.MustString(val))
+	for _, key := range r.params {
+		val := ctx.get(key)
+		if val == nil {
+			panic(fmt.Errorf(ErrMissingParameter.Error(), key))
+		}
+		values = append(values, val)
 	}
 	qb := *r.qb
 
@@ -85,26 +70,18 @@ func (r *RouteConfig) process(ctx Context) error {
 	}
 	switch r.queryType {
 	case `INSERT`:
-		rs, e := tx.Exec(r.query, values...)
+		rs, e := ctx.execQuery(r.query, values...)
 		if e != nil {
-			return e
+			return nil, e
 		}
-		id, e := rs.LastInsertID()
-		if e != nil {
-			return e
-		}
-		r.putOutput(req, resp, id)
+		return rs.LastInsertID()
 
 	case `UPDATE`:
-		rs, e := tx.Exec(r.query, values...)
+		rs, e := ctx.execQuery(r.query, values...)
 		if e != nil {
-			return e
+			return nil, e
 		}
-		rows, e := rs.RowsAffected()
-		if e != nil {
-			return e
-		}
-		r.putOutput(req, resp, rows)
+		return rs.RowsAffected()
 
 	case `GET`:
 		fallthrough
@@ -129,39 +106,62 @@ func (r *RouteConfig) process(ctx Context) error {
 
 		if r.queryType == `GET` {
 			qb.Limit(qb.LimitStart(), 1)
-			rs, e := tx.Get(qb.ToSQL(), values...)
+			rs, e := ctx.getQuery(qb.ToSQL(), values...)
 			if e != nil {
-				return e
+				return nil, e
 			}
-			r.putOutput(req, resp, rs)
-		} else {
-			rs, e := tx.Select(qb.ToSQL(), values...)
-			if e != nil {
-				return e
+			if rs == nil {
+				rs = db.Resultset{}
 			}
-			r.putOutput(req, resp, rs)
+			return rs, nil
 		}
+		rs, e := ctx.selectQuery(qb.ToSQL(), values...)
+		if e != nil {
+			return nil, e
+		}
+		if rs == nil {
+			rs = []db.Resultset{}
+		}
+		return rs, nil
 	}
-	return nil
+	return nil, fmt.Errorf(ErrUnknownQueryType.Error(), r.queryType)
 }
 
-func newRouteConfig(cfg json.Object) *RouteConfig {
-	r := &RouteConfig{
-		query:     strings.TrimSpace(cfg.GetString(`query`)),
+func (r *Route) setQuery(query string) {
+	r.query = strings.TrimSpace(query)
+	if r.queryType == `` {
+		if strings.HasSuffix(r.query, `()`) {
+			r.queryType = `FUNC`
+		} else {
+			str := strings.SplitN(r.query, ` `, 2)
+			r.queryType = strings.ToUpper(str[0])
+			if r.queryType == `SELECT` && regexp.MustCompile(`LIMIT.*\s+1$`).MatchString(strings.ToUpper(r.query)) {
+				r.queryType = `GET`
+			}
+		}
+	} else {
+		r.queryType = strings.ToUpper(r.queryType)
+	}
+	if r.queryType != `FUNC` {
+		r.qb = db.ParseQuery(r.query)
+	}
+}
+
+//RouteWithFunc ...
+func RouteWithFunc(f RouteFunc) *Route {
+	return &Route{
+		routeFunc: f,
+	}
+}
+
+//RouteFromJSON ...
+func RouteFromJSON(cfg json.Object) *Route {
+	r := &Route{
 		queryType: strings.TrimSpace(cfg.GetString(`query_type`)),
 		output:    strings.TrimSpace(cfg.GetStringOr(`output`, `data`)),
 		authType:  cfg.GetString(`auth`),
 	}
-	if r.queryType == `` {
-		str := strings.SplitN(r.query, ` `, 2)
-		r.queryType = strings.ToUpper(str[0])
-		if r.queryType == `SELECT` && regexp.MustCompile(`LIMIT.*\s+1$`).MatchString(strings.ToUpper(r.query)) {
-			r.queryType = `GET`
-		}
-	}
-
-	r.queryType = strings.ToUpper(r.queryType)
-	r.qb = db.ParseQuery(r.query)
+	r.setQuery(cfg.GetString(`query`))
 
 	if params := cfg.GetString(`params`); params != `` {
 		split := strings.Split(params, `,`)
