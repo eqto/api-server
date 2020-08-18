@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"strings"
 
 	"gitlab.com/tuxer/go-db"
@@ -34,6 +33,15 @@ func (c *Context) Response() *Response {
 	return c.resp
 }
 
+//Connection ...
+func (c *Context) Connection() *db.Tx {
+	return c.tx
+}
+
+func (c *Context) Server() *Server {
+	return c.s
+}
+
 func (c *Context) execQuery(query string, params ...interface{}) (*db.Result, error) {
 	return c.tx.Exec(query, params...)
 }
@@ -52,18 +60,23 @@ func (c *Context) get(key string) interface{} {
 	}
 	return c.req.Get(key)
 }
-
-func (c *Context) execFunc(name string) (interface{}, error) {
-	if strings.HasSuffix(name, `()`) {
-		name = name[0 : len(name)-2]
+func (c *Context) getString(key string) string {
+	if strings.HasPrefix(key, `$`) {
+		return c.result.GetString(key)
 	}
-	if f, ok := c.s.funcMap[name]; ok {
-		return f(c)
+	return c.req.GetString(key)
+}
+func (c *Context) getInt(key string) int {
+	if strings.HasPrefix(key, `$`) {
+		return c.result.GetInt(key)
 	}
-	return nil, fmt.Errorf(ErrFunctionNotFound.Error(), name)
+	return c.req.GetInt(key)
 }
 
 func (c *Context) put(output string, value interface{}) {
+	if output == `` {
+		output = `data`
+	}
 	current := c.get(output)
 
 	value = json.NormalizeValue(value)

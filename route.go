@@ -11,7 +11,7 @@ import (
 )
 
 //RouteFunc ...
-type RouteFunc func(ctx *Context) (interface{}, error)
+type RouteFunc func(ctx Context) (interface{}, error)
 
 //Route ...
 type Route struct {
@@ -25,11 +25,34 @@ type Route struct {
 	routeFunc RouteFunc
 }
 
-func (r *Route) process(ctx *Context) (interface{}, error) {
+func (r *Route) execFunc(ctx Context) (interface{}, error) {
+	funcName := r.query
+	if strings.HasSuffix(funcName, `()`) {
+		funcName = funcName[0 : len(funcName)-2]
+	}
+	if f, ok := ctx.s.funcMap[funcName]; ok {
+		regex := regexp.MustCompile(`(?Uis)(.*)AS\s+([\w]+)$`)
+		params := []Parameter{}
+
+		for _, param := range r.params {
+			p := Parameter{}
+			if matches := regex.FindStringSubmatch(param); len(matches) > 0 {
+				p.set(ctx.get(matches[1]))
+			} else {
+				p.set(ctx.get(param))
+			}
+			params = append(params, p)
+		}
+		return f(ctx, params...)
+	}
+	return nil, fmt.Errorf(ErrFunctionNotFound.Error(), funcName)
+}
+
+func (r *Route) process(ctx Context) (interface{}, error) {
 	req := ctx.Request()
 
 	if r.queryType == `FUNC` {
-		return ctx.execFunc(r.query)
+		return r.execFunc(ctx)
 	}
 
 	values := []interface{}{}
@@ -46,25 +69,31 @@ func (r *Route) process(ctx *Context) (interface{}, error) {
 	if filter := req.GetJSONObject(`filter`); filter != nil {
 		for keyFilter := range filter {
 			valFilter := filter.GetJSONObject(keyFilter)
-			value := valFilter.GetString(`value`)
+			filterType, filterValue := ``, ``
+			if valFilter == nil {
+				filterValue = filter.GetString(keyFilter)
+			} else {
+				filterValue = valFilter.GetString(`value`)
+				filterType = valFilter.GetString(`type`)
+			}
 
-			switch valFilter.GetString(`type`) {
+			switch filterType {
 			case `input`:
 				qb.WhereOp(keyFilter, ` LIKE `)
-				values = append(values, value+`%`)
+				values = append(values, filterValue+`%`)
 			case `number`:
-				value = strings.TrimSpace(value)
-				if strings.HasPrefix(value, `<`) {
-					value = strings.TrimSpace(value[1:])
+				filterValue = strings.TrimSpace(filterValue)
+				if strings.HasPrefix(filterValue, `<`) {
+					filterValue = strings.TrimSpace(filterValue[1:])
 					qb.WhereOp(keyFilter, ` < `)
-				} else if strings.HasPrefix(value, `>`) {
-					value = strings.TrimSpace(value[1:])
+				} else if strings.HasPrefix(filterValue, `>`) {
+					filterValue = strings.TrimSpace(filterValue[1:])
 					qb.WhereOp(keyFilter, ` > `)
 				}
-				values = append(values, value)
+				values = append(values, filterValue)
 			default:
 				qb.Where(keyFilter)
-				values = append(values, value)
+				values = append(values, filterValue)
 			}
 		}
 	}
@@ -77,6 +106,8 @@ func (r *Route) process(ctx *Context) (interface{}, error) {
 		return rs.LastInsertID()
 
 	case `UPDATE`:
+		fallthrough
+	case `DELETE`:
 		rs, e := ctx.execQuery(r.query, values...)
 		if e != nil {
 			return nil, e
@@ -154,21 +185,30 @@ func RouteWithFunc(f RouteFunc) *Route {
 	}
 }
 
-//RouteFromJSON ...
-func RouteFromJSON(cfg json.Object) *Route {
-	r := &Route{
-		queryType: strings.TrimSpace(cfg.GetString(`query_type`)),
-		output:    strings.TrimSpace(cfg.GetStringOr(`output`, `data`)),
-		authType:  cfg.GetString(`auth`),
+//NewRoute ...
+func NewRoute(query, params, output string) *Route {
+	r := &Route{}
+	if output != `` {
+		r.output = output
 	}
-	r.setQuery(cfg.GetString(`query`))
+	r.setQuery(query)
 
-	if params := cfg.GetString(`params`); params != `` {
+	if params != `` {
 		split := strings.Split(params, `,`)
 		for key, val := range split {
 			split[key] = strings.TrimSpace(val)
 		}
 		r.params = split
+	}
+	return r
+
+}
+
+//RouteFromJSON ...
+func RouteFromJSON(cfg json.Object) *Route {
+	r := NewRoute(cfg.GetString(`query`), cfg.GetString(`params`), cfg.GetStringOr(`output`, `data`))
+	if t := cfg.GetString(`query_type`); t != `` {
+		r.queryType = t
 	}
 	return r
 }

@@ -20,15 +20,14 @@ import (
 )
 
 //Func ...
-type Func func(ctx *Context) (interface{}, error)
+type Func func(ctx Context, params ...Parameter) (interface{}, error)
 
 //Server ...
 type Server struct {
 	port    int
 	healthy int32
 
-	routePathMap map[string]*RoutePath
-	authManager  *auth.Manager
+	authManager *auth.Manager
 
 	configFile string
 	config     json.Object
@@ -37,6 +36,8 @@ type Server struct {
 	logger Logger
 
 	funcMap map[string]Func
+
+	serveMux *ServeMux
 }
 
 //OpenDatabase ...
@@ -46,9 +47,14 @@ func (s *Server) OpenDatabase(hostname string, port int, username, password, nam
 		return fmt.Errorf(`unable to open database connection %s@%s:%d/%s`, username, hostname, port, name)
 	}
 	s.cn = cn
-	s.logger.D(fmt.Sprintf(`database connection %s@%s:%d/%s`, username, hostname, port, name))
+	s.logger.D(fmt.Sprintf(`Database connection %s@%s:%d/%s`, username, hostname, port, name))
 
 	return nil
+}
+
+//Connection ...
+func (s *Server) Connection() *db.Connection {
+	return s.cn
 }
 
 //AddFunc ...
@@ -57,7 +63,7 @@ func (s *Server) AddFunc(name string, f Func) {
 		s.funcMap = make(map[string]Func)
 	}
 	s.funcMap[name] = f
-	s.logger.D(fmt.Sprintf(`add api server function: %s`, name))
+	s.logger.D(fmt.Sprintf(`Add function: %s`, name))
 }
 
 //AddPaths ...
@@ -87,17 +93,41 @@ func (s *Server) AddPaths(paths json.Object) error {
 			}
 		}
 		if len(routePath.Routes()) > 0 {
-			if e := s.addRoutePathMap(m[1], m[3], routePath); e != nil {
+			if e := s.SetRoutePath(m[1], m[3], routePath); e != nil {
 				s.logger.W(e)
 			}
 			if m[2] != `` {
-				if e := s.addRoutePathMap(m[2], m[3], routePath); e != nil {
+				if e := s.SetRoutePath(m[2], m[3], routePath); e != nil {
 					s.logger.W(e)
 				}
 			}
 		}
 	}
 	return nil
+}
+
+//SetRoutePath ...
+func (s *Server) SetRoutePath(method, path string, routePath *RoutePath) error {
+	return s.SetModuleRoutePath(``, method, path, routePath)
+}
+
+//SetModuleRoutePath ...
+func (s *Server) SetModuleRoutePath(module, method, path string, routePath *RoutePath) error {
+	method = strings.ToUpper(method)
+
+	if s.serveMux == nil {
+		s.serveMux = newServeMux(s)
+	}
+	s.serveMux.setRoutePath(module, method, path, routePath)
+	return nil
+}
+
+//AddMiddleware ...
+func (s *Server) AddMiddleware(middleware Middleware) {
+	if s.serveMux == nil {
+		s.serveMux = newServeMux(s)
+	}
+	s.serveMux.AddMiddleware(middleware)
 }
 
 //Start ...
@@ -137,9 +167,13 @@ func (s *Server) Start() error {
 		}
 	}
 
+	if s.serveMux == nil {
+		s.serveMux = newServeMux(s)
+	}
+
 	httpServer := &http.Server{
 		Addr:           fmt.Sprintf(`:%d`, s.port),
-		Handler:        newServeMux(s),
+		Handler:        s.serveMux,
 		ReadTimeout:    5 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		IdleTimeout:    15 * time.Second,
@@ -177,26 +211,6 @@ func (s *Server) Start() error {
 
 }
 
-func (s *Server) addRoutePathMap(method, path string, routePath *RoutePath) error {
-	if s.routePathMap == nil {
-		s.routePathMap = make(map[string]*RoutePath)
-	}
-	method = strings.ToUpper(method)
-	if method != `GET` && method != `POST` {
-		return fmt.Errorf(`unable to register route %s with method %s`, path, method)
-	}
-	s.routePathMap[method+` `+path] = routePath
-	return nil
-}
-
-func (s *Server) getRouteMap(method, path string) (*RoutePath, error) {
-	method = strings.ToUpper(method)
-	if routePath, ok := s.routePathMap[method+` `+path]; ok {
-		return routePath, nil
-	}
-	return nil, fmt.Errorf(`unable to get route %s with method %s`, path, method)
-}
-
 //SetPort ...
 func (s *Server) SetPort(port int) {
 	s.port = port
@@ -216,7 +230,7 @@ func (s *Server) Route(method []string, path string, routeFunc RouteFunc) error 
 	routePath.AddRoute(&Route{routeFunc: routeFunc})
 
 	for _, val := range method {
-		if e := s.addRoutePathMap(val, path, routePath); e != nil {
+		if e := s.SetRoutePath(val, path, routePath); e != nil {
 			return e
 		}
 	}
