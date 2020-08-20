@@ -42,6 +42,17 @@ func (s *Server) GetRoute(method, path string) (*Route, error) {
 	return nil, fmt.Errorf(`route %s %s not found`, method, path)
 }
 
+//SetRoute ...
+func (s *Server) SetRoute(method, path string, route *Route) error {
+	idx, e := s.routeMethod(method, path)
+	if e != nil {
+		return e
+	}
+	s.init()
+	s.routeMap[idx][path] = route
+	return nil
+}
+
 func (s *Server) routeMethod(method, path string) (int8, error) {
 	switch method {
 	case MethodGet:
