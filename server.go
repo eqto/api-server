@@ -5,7 +5,9 @@ import (
 )
 
 const (
-	MethodGet  = `GET`
+	//MethodGet GET
+	MethodGet = `GET`
+	//MethodPost POST
 	MethodPost = `POST`
 )
 
