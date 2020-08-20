@@ -11,18 +11,33 @@ const (
 
 //Server ...
 type Server struct {
-	routeMap map[string]*Route
+	//index = routeMethodGet or routeMethodPost
+	routeMap map[int8]map[string]*Route
 }
 
 //NewRoute ...
 func (s *Server) NewRoute(method, path string) (*Route, error) {
-	m, e := s.routeMethod(method, path)
+	idx, e := s.routeMethod(method, path)
 	if e != nil {
 		return nil, e
 	}
-	route := &Route{path: path, method: m}
-	s.routeMap[fmt.Sprintf(`%s-%s`, method, path)] = route
+	route := &Route{path: path, method: idx}
+	s.init()
+	s.routeMap[idx][path] = route
 	return route, nil
+}
+
+//GetRoute ...
+func (s *Server) GetRoute(method, path string) (*Route, error) {
+	idx, e := s.routeMethod(method, path)
+	if e != nil {
+		return nil, e
+	}
+	s.init()
+	if r, ok := s.routeMap[idx][path]; ok {
+		return r, nil
+	}
+	return nil, fmt.Errorf(`route %s %s not found`, method, path)
 }
 
 func (s *Server) routeMethod(method, path string) (int8, error) {
@@ -36,19 +51,17 @@ func (s *Server) routeMethod(method, path string) (int8, error) {
 	}
 }
 
-//GetRoute ...
-func (s *Server) GetRoute(method, path string) (*Route, error) {
-	_, e := s.routeMethod(method, path)
-	if e != nil {
-		return nil, e
+func (s *Server) init() {
+	if s.routeMap == nil {
+		s.routeMap = make(map[int8]map[string]*Route)
+		s.routeMap[routeMethodGet] = make(map[string]*Route)
+		s.routeMap[routeMethodPost] = make(map[string]*Route)
 	}
-	if r, ok := s.routeMap[fmt.Sprintf(`%s-%s`, method, path)]; ok {
-		return r, nil
-	}
-	return nil, fmt.Errorf(`route %s %s not found`, method, path)
 }
 
 //NewServer ...
 func NewServer() *Server {
-	return &Server{routeMap: make(map[string]*Route)}
+	s := &Server{}
+	s.init()
+	return s
 }
