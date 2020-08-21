@@ -1,7 +1,10 @@
 package apims
 
 import (
+	"errors"
 	"fmt"
+
+	"github.com/eqto/go-db"
 )
 
 const (
@@ -9,22 +12,67 @@ const (
 	MethodGet = `GET`
 	//MethodPost POST
 	MethodPost = `POST`
+
+	StatusBadRequest = 400
+	StatusNotFound   = 404
+	StatusOK         = 200
 )
 
 //Server ...
 type Server struct {
 	//index = routeMethodGet or routeMethodPost
 	routeMap map[int8]map[string]*Route
+
+	defaultContentType string
+
+	db struct {
+		host     string
+		port     uint16
+		username string
+		password string
+		name     string
+	}
+	cn *db.Connection
+}
+
+//OpenDatabase call SetDatabase and Connect
+func (s *Server) OpenDatabase(host string, port uint16, username, password, name string) error {
+	s.SetDatabase(host, port, username, password, name)
+	return s.Connect()
+}
+
+//Connect ...
+func (s *Server) Connect() error {
+	cn, e := db.NewConnection(s.db.host, s.db.port, s.db.username, s.db.password, s.db.name)
+	if e != nil {
+		return e
+	}
+	if e := cn.Ping(); e != nil {
+		return e
+	}
+	s.cn = cn
+	return nil
+}
+
+//SetDatabase ...
+func (s *Server) SetDatabase(host string, port uint16, username, password, name string) {
+	s.db.host = host
+	s.db.port = uint16(port)
+	s.db.username = username
+	s.db.password = password
+	s.db.name = name
 }
 
 //NewRoute ...
 func (s *Server) NewRoute(method, path string) (*Route, error) {
+	if s.routeMap == nil {
+		return nil, errors.New(`unable to create route, please use NewServer() to create new server`)
+	}
 	idx, e := s.routeMethod(method, path)
 	if e != nil {
 		return nil, e
 	}
 	route := &Route{path: path, method: idx}
-	s.init()
 	s.routeMap[idx][path] = route
 	return route, nil
 }
@@ -35,7 +83,6 @@ func (s *Server) GetRoute(method, path string) (*Route, error) {
 	if e != nil {
 		return nil, e
 	}
-	s.init()
 	if r, ok := s.routeMap[idx][path]; ok {
 		return r, nil
 	}
@@ -44,11 +91,13 @@ func (s *Server) GetRoute(method, path string) (*Route, error) {
 
 //SetRoute ...
 func (s *Server) SetRoute(method, path string, route *Route) error {
+	if s.routeMap == nil {
+		return errors.New(`unable to set route, please use NewServer() to create new server`)
+	}
 	idx, e := s.routeMethod(method, path)
 	if e != nil {
 		return e
 	}
-	s.init()
 	s.routeMap[idx][path] = route
 	return nil
 }
@@ -64,17 +113,10 @@ func (s *Server) routeMethod(method, path string) (int8, error) {
 	}
 }
 
-func (s *Server) init() {
-	if s.routeMap == nil {
-		s.routeMap = make(map[int8]map[string]*Route)
-		s.routeMap[routeMethodGet] = make(map[string]*Route)
-		s.routeMap[routeMethodPost] = make(map[string]*Route)
-	}
-}
-
 //NewServer ...
 func NewServer() *Server {
-	s := &Server{}
-	s.init()
+	s := &Server{routeMap: make(map[int8]map[string]*Route)}
+	s.routeMap[routeMethodGet] = make(map[string]*Route)
+	s.routeMap[routeMethodPost] = make(map[string]*Route)
 	return s
 }
