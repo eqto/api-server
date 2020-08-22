@@ -8,9 +8,8 @@ const (
 )
 
 //Action ...
-type Action struct {
-	command  string
-	typ      int8
-	params   string
-	property string
+type Action interface {
+	execute(ctx *context) (interface{}, error)
+	property() string
+	params() []string
 }

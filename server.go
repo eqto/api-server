@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/eqto/go-db"
+	"github.com/eqto/go-json"
 )
 
 const (
@@ -16,6 +17,8 @@ const (
 	StatusBadRequest = 400
 	StatusNotFound   = 404
 	StatusOK         = 200
+
+	StatusInternalServerError = 500
 )
 
 //Server ...
@@ -25,13 +28,6 @@ type Server struct {
 
 	defaultContentType string
 
-	db struct {
-		host     string
-		port     uint16
-		username string
-		password string
-		name     string
-	}
 	cn *db.Connection
 }
 
@@ -43,28 +39,16 @@ func (s *Server) OpenDatabase(host string, port uint16, username, password, name
 
 //Connect ...
 func (s *Server) Connect() error {
-	cn, e := db.NewConnection(s.db.host, s.db.port, s.db.username, s.db.password, s.db.name)
-	if e != nil {
-		return e
-	}
-	if e := cn.Ping(); e != nil {
-		return e
-	}
-	s.cn = cn
-	return nil
+	return s.cn.Connect()
 }
 
 //SetDatabase ...
 func (s *Server) SetDatabase(host string, port uint16, username, password, name string) {
-	s.db.host = host
-	s.db.port = uint16(port)
-	s.db.username = username
-	s.db.password = password
-	s.db.name = name
+	s.cn = db.NewEmptyConnection(host, port, username, password, name)
 }
 
-//NewRoute ...
-func (s *Server) NewRoute(method, path string) (*Route, error) {
+//AddRoute ...
+func (s *Server) AddRoute(method, path string) (*Route, error) {
 	if s.routeMap == nil {
 		return nil, errors.New(`unable to create route, please use NewServer() to create new server`)
 	}
@@ -100,6 +84,40 @@ func (s *Server) SetRoute(method, path string, route *Route) error {
 	}
 	s.routeMap[idx][path] = route
 	return nil
+}
+
+//Execute request and Response header and body
+func (s *Server) Execute(method, url, contentType, body []byte) (Response, error) {
+	req, e := parseRequest(url, contentType, body)
+	if e != nil {
+		return newResponse(StatusBadRequest), e
+	}
+	route, e := s.GetRoute(string(method), req.URL().Path)
+	if e != nil { //route not found
+		return newResponse(StatusNotFound), e
+
+	}
+	resp := newResponse(StatusOK)
+	tx, e := s.cn.Begin()
+	if e != nil { //db error
+		return newResponse(StatusInternalServerError), e
+	}
+	defer tx.Commit()
+
+	//TODO add session
+	ctx := &context{tx: tx, req: req, resp: resp, vars: json.Object{}}
+	for _, action := range route.action {
+		result, e := action.execute(ctx)
+		if e != nil {
+			tx.Rollback()
+			return newResponse(StatusInternalServerError), e
+		}
+		if prop := action.property(); prop != `` {
+			ctx.put(prop, result)
+		}
+	}
+
+	return resp, nil
 }
 
 func (s *Server) routeMethod(method, path string) (int8, error) {

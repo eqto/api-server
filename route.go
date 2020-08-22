@@ -9,23 +9,15 @@ const (
 type Route struct {
 	path   string
 	method int8
-	action []*Action
+	action []Action
 }
 
-//AddQueryList ...
-func (r *Route) AddQueryList(query, params, property string) *Action {
-	act := &Action{command: query, params: params, property: property, typ: actionTypeList}
-	r.addAction(act)
-	return act
-}
-
-//AddQueryGet ...
-func (r *Route) AddQueryGet(query, params, property string) *Action {
-	act := &Action{command: query, params: params, property: property, typ: actionTypeGet}
-	r.addAction(act)
-	return act
-}
-
-func (r *Route) addAction(act *Action) {
+//AddQueryAction add
+func (r *Route) AddQueryAction(query, params, property string) (Action, error) {
+	act, e := newQueryAction(query, property, params)
+	if e != nil {
+		return nil, e
+	}
 	r.action = append(r.action, act)
+	return act, nil
 }
