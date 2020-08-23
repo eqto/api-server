@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/eqto/go-db"
+	"github.com/eqto/go-json"
 )
 
 const (
@@ -44,17 +45,7 @@ func (q *queryAction) params() []string {
 	return q.qParams
 }
 
-func (q *queryAction) execute(ctx *context) (interface{}, error) {
-	values := []interface{}{}
-
-	for _, param := range q.qParams {
-		val := ctx.req.get(param)
-		if val == nil {
-			return nil, fmt.Errorf(errMissingParameter.Error(), param)
-		}
-		values = append(values, val)
-	}
-
+func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface{}, error) {
 	var data interface{}
 
 	switch q.qType {
@@ -79,11 +70,52 @@ func (q *queryAction) execute(ctx *context) (interface{}, error) {
 				data = rs
 			}
 		}
-
 	case queryTypeInsert:
 
 	}
 	return data, nil
+}
+
+func (q *queryAction) populateValues(ctx *context, item json.Object) ([]interface{}, error) {
+	values := []interface{}{}
+	for _, param := range q.qParams {
+		if strings.HasPrefix(param, q.arrayName+`[`) && strings.HasSuffix(param, `]`) {
+			val := item.Get(param[len(q.arrayName)+1 : len(param)-1])
+			values = append(values, val)
+		} else {
+			val := ctx.req.get(param)
+			if val == nil {
+				return nil, fmt.Errorf(errMissingParameter.Error(), param)
+			}
+			values = append(values, val)
+		}
+	}
+	return values, nil
+}
+
+func (q *queryAction) execute(ctx *context) (interface{}, error) {
+	if q.arrayName != `` { //execute array
+		array := ctx.req.jsonBody.GetArray(q.arrayName)
+
+		result := []interface{}{}
+		for _, obj := range array {
+			values, e := q.populateValues(ctx, obj)
+			if e != nil {
+				return nil, e
+			}
+			r, e := q.executeItem(ctx, values)
+			if e != nil {
+				return nil, e
+			}
+			result = append(result, r)
+		}
+		return result, nil
+	}
+	values, e := q.populateValues(ctx, nil)
+	if e != nil {
+		return nil, e
+	}
+	return q.executeItem(ctx, values)
 }
 
 func newQueryAction(query, property, params string) (*queryAction, error) {
