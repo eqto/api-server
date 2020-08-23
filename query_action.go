@@ -70,6 +70,12 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 				data = rs
 			}
 		}
+	case queryTypeUpdate:
+		rs, e := ctx.tx.Exec(q.q, values...)
+		if e != nil {
+			return nil, fmt.Errorf(errExecutingQuery.Error(), q.q)
+		}
+		data = rs
 	case queryTypeInsert:
 
 	}
