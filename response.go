@@ -1,6 +1,9 @@
 package apims
 
-import "github.com/eqto/go-json"
+import (
+	"github.com/eqto/go-json"
+	log "github.com/eqto/go-logger"
+)
 
 //Response ...
 type Response interface {
@@ -15,6 +18,10 @@ type response struct {
 
 	status uint16
 	header Header
+	server *Server
+
+	err      error
+	errFrame []log.Frame
 }
 
 func (r *response) Status() int {
@@ -31,9 +38,21 @@ func (r *response) Success() bool {
 }
 
 func (r *response) Body() []byte {
-	return r.Object.ToBytes()
+	js := r.Object.Clone()
+	if !r.server.isProduction {
+		trace := []string{}
+		for _, frame := range r.errFrame {
+			trace = append(trace, frame.String())
+		}
+		if r.err != nil {
+			js.Put(`debug.message`, r.err.Error())
+			js.Put(`debug.stacktrace`, trace)
+		}
+	}
+	return js.ToBytes()
 }
 
-func newResponse(status uint16) *response {
-	return &response{status: status, header: Header{}, Object: json.Object{}}
+func (r *response) setError(err error) {
+	r.err = err
+	r.errFrame = log.Stacktrace()
 }

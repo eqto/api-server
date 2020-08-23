@@ -28,6 +28,8 @@ type Server struct {
 
 	defaultContentType string
 
+	isProduction bool
+
 	cn *db.Connection
 }
 
@@ -90,17 +92,17 @@ func (s *Server) SetRoute(method, path string, route *Route) error {
 func (s *Server) Execute(method, url, contentType, body []byte) (Response, error) {
 	req, e := parseRequest(url, contentType, body)
 	if e != nil {
-		return newResponse(StatusBadRequest), e
+		return s.newErrorResponse(StatusBadRequest, e)
 	}
 	route, e := s.GetRoute(string(method), req.URL().Path)
 	if e != nil { //route not found
-		return newResponse(StatusNotFound), e
+		return s.newErrorResponse(StatusNotFound, e)
 
 	}
-	resp := newResponse(StatusOK)
+	resp := s.newResponse(StatusOK)
 	tx, e := s.cn.Begin()
 	if e != nil { //db error
-		return newResponse(StatusInternalServerError), e
+		return s.newErrorResponse(StatusInternalServerError, e)
 	}
 	defer tx.Commit()
 
@@ -110,7 +112,7 @@ func (s *Server) Execute(method, url, contentType, body []byte) (Response, error
 		result, e := action.execute(ctx)
 		if e != nil {
 			tx.Rollback()
-			return newResponse(StatusInternalServerError), e
+			return s.newErrorResponse(StatusInternalServerError, e)
 		}
 		if prop := action.property(); prop != `` {
 			ctx.put(prop, result)
@@ -118,6 +120,16 @@ func (s *Server) Execute(method, url, contentType, body []byte) (Response, error
 	}
 
 	return resp, nil
+}
+
+//SetProduction ...
+func (s *Server) SetProduction() {
+	s.isProduction = true
+}
+
+//SetDebug ...
+func (s *Server) SetDebug() {
+	s.isProduction = false
 }
 
 func (s *Server) routeMethod(method, path string) (int8, error) {
@@ -129,6 +141,16 @@ func (s *Server) routeMethod(method, path string) (int8, error) {
 	default:
 		return 0, fmt.Errorf(`unrecognized method %s, choose between apims.MethodGet or apims.MethodPost`, method)
 	}
+}
+
+func (s *Server) newErrorResponse(status uint16, err error) (*response, error) {
+	resp := s.newResponse(status)
+	resp.setError(err)
+	return resp, err
+}
+
+func (s *Server) newResponse(status uint16) *response {
+	return &response{server: s, status: status, header: Header{}, Object: json.Object{}}
 }
 
 //NewServer ...
