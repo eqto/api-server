@@ -26,7 +26,7 @@ var (
 type queryAction struct {
 	Action
 
-	q         string
+	rawQuery  string
 	qType     uint8
 	qProperty string
 	qParams   []string
@@ -47,37 +47,32 @@ func (q *queryAction) params() []string {
 
 func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface{}, error) {
 	var data interface{}
+	var err error
 
 	switch q.qType {
 	case queryTypeSelect:
 		if q.qBuilder != nil { //run sql function
-			rs, e := ctx.tx.Select(q.q, values...)
-			if e != nil {
-				return nil, fmt.Errorf(errExecutingQuery.Error(), q.q)
+			data, err = ctx.tx.Select(q.qBuilder.ToSQL(), values...)
+			if data == nil {
+				data = []db.Resultset{}
 			}
-			if rs == nil {
-				rs = []db.Resultset{}
-			}
-			data = rs
 		}
 	case queryTypeGet:
 		if q.qBuilder != nil { //run sql function
-			rs, e := ctx.tx.Get(q.q, values...)
+			res, e := ctx.tx.Get(q.qBuilder.ToSQL(), values...)
 			if e != nil {
-				return nil, fmt.Errorf(errExecutingQuery.Error(), q.q)
-			}
-			if rs != nil {
-				data = rs
+				err = e
+			} else if res != nil {
+				data = res
 			}
 		}
 	case queryTypeUpdate:
-		rs, e := ctx.tx.Exec(q.q, values...)
-		if e != nil {
-			return nil, fmt.Errorf(errExecutingQuery.Error(), q.q)
-		}
-		data = rs
+		data, err = ctx.tx.Exec(q.rawQuery, values...)
 	case queryTypeInsert:
 
+	}
+	if err != nil {
+		return nil, fmt.Errorf(errExecutingQuery.Error(), q.rawQuery)
 	}
 	return data, nil
 }
@@ -125,7 +120,7 @@ func (q *queryAction) execute(ctx *context) (interface{}, error) {
 }
 
 func newQueryAction(query, property, params string) (*queryAction, error) {
-	act := &queryAction{q: query, qProperty: property}
+	act := &queryAction{rawQuery: query, qProperty: property}
 
 	str := strings.SplitN(query, ` `, 2)
 	queryType := strings.ToUpper(str[0])
