@@ -3,6 +3,7 @@ package apims
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/eqto/go-db"
 	"github.com/eqto/go-json"
@@ -31,6 +32,10 @@ type Server struct {
 	isProduction bool
 
 	cn *db.Connection
+
+	logD func(v ...interface{})
+	logW func(v ...interface{})
+	logE func(v ...interface{})
 }
 
 //OpenDatabase call SetDatabase and Connect
@@ -60,7 +65,21 @@ func (s *Server) AddRoute(method, path string) (*Route, error) {
 	}
 	route := &Route{path: path, method: idx}
 	s.routeMap[idx][path] = route
+	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
 	return route, nil
+}
+
+//AddDataRoute add query with action result to property named "data"
+func (s *Server) AddDataRoute(method, path, query, params string) (*Route, error) {
+	r, e := s.AddRoute(method, path)
+	if e != nil {
+		return nil, e
+	}
+	_, e = r.AddQueryAction(query, params, `data`)
+	if e != nil {
+		return r, e
+	}
+	return r, nil
 }
 
 //GetRoute ...
@@ -89,8 +108,8 @@ func (s *Server) SetRoute(method, path string, route *Route) error {
 }
 
 //Execute request and Response header and body
-func (s *Server) Execute(method, url, contentType, body []byte) (Response, error) {
-	req, e := parseRequest(url, contentType, body)
+func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
+	req, e := parseRequest(method, url, header, body)
 	if e != nil {
 		return s.newErrorResponse(StatusBadRequest, e)
 	}
@@ -132,6 +151,13 @@ func (s *Server) SetDebug() {
 	s.isProduction = false
 }
 
+//SetLogger ...
+func (s *Server) SetLogger(debug func(v ...interface{}), warn func(v ...interface{}), err func(v ...interface{})) {
+	s.logD = debug
+	s.logW = warn
+	s.logE = err
+}
+
 func (s *Server) routeMethod(method, path string) (int8, error) {
 	switch method {
 	case MethodGet:
@@ -153,9 +179,26 @@ func (s *Server) newResponse(status uint16) *response {
 	return &response{server: s, status: status, header: Header{}, Object: json.Object{}}
 }
 
+func (s *Server) debug(v ...interface{}) {
+	if !s.isProduction {
+		s.logD(v...)
+	}
+}
+func (s *Server) warn(v ...interface{}) {
+	s.logW(v...)
+}
+func (s *Server) error(v ...interface{}) {
+	s.logW(v...)
+}
+
 //NewServer ...
 func NewServer() *Server {
-	s := &Server{routeMap: make(map[int8]map[string]*Route)}
+	s := &Server{
+		routeMap: make(map[int8]map[string]*Route),
+		logD:     log.Println,
+		logW:     log.Println,
+		logE:     log.Println,
+	}
 	s.routeMap[routeMethodGet] = make(map[string]*Route)
 	s.routeMap[routeMethodPost] = make(map[string]*Route)
 	return s

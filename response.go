@@ -39,20 +39,18 @@ func (r *response) Success() bool {
 
 func (r *response) Body() []byte {
 	js := r.Object.Clone()
-	if !r.server.isProduction {
+	if !r.server.isProduction && r.err != nil {
 		trace := []string{}
 		for _, frame := range r.errFrame {
 			trace = append(trace, frame.String())
 		}
-		if r.err != nil {
-			js.Put(`debug.message`, r.err.Error())
-			js.Put(`debug.stacktrace`, trace)
-		}
+		js.Put(`debug.message`, r.err.Error())
+		js.Put(`debug.stacktrace`, trace)
 	}
 	return js.ToBytes()
 }
 
 func (r *response) setError(err error) {
 	r.err = err
-	r.errFrame = log.Stacktrace()
+	r.errFrame = log.Stacktrace(2)
 }
