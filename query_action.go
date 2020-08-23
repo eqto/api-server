@@ -48,7 +48,7 @@ func (q *queryAction) execute(ctx *context) (interface{}, error) {
 	values := []interface{}{}
 
 	for _, param := range q.qParams {
-		val := ctx.get(param)
+		val := ctx.req.get(param)
 		if val == nil {
 			return nil, fmt.Errorf(errMissingParameter.Error(), param)
 		}

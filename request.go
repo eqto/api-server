@@ -1,6 +1,10 @@
 package apims
 
 import (
+	"bufio"
+	"bytes"
+	"errors"
+	"net/textproto"
 	uri "net/url"
 
 	"github.com/eqto/go-json"
@@ -8,38 +12,68 @@ import (
 
 //Request ...
 type Request interface {
-	GetJSONBody() json.Object
+	Header() Header
+	JSONBody() json.Object
 }
 
 type request struct {
+	header   Header
 	body     []byte
 	url      *uri.URL
 	jsonBody json.Object
 }
 
-func (r *request) GetJSONBody() json.Object {
+func (r *request) Header() Header {
+	return r.header
+}
+
+func (r *request) JSONBody() json.Object {
 	if r.jsonBody != nil {
 		return r.jsonBody
 	}
 	return json.Object{}
 }
 
+func (r *request) get(key string) interface{} {
+	if r.jsonBody != nil {
+		if r.jsonBody.Has(key) {
+			return r.jsonBody.Get(key)
+		} else {
+			return nil
+		}
+	}
+	return r.url.Query().Get(key)
+}
+
 func (r *request) URL() *uri.URL {
 	return r.url
 }
 
-func parseRequest(url, contentType, body []byte) (*request, error) {
+func parseRequest(method, url, header, body []byte) (*request, error) {
 	u, e := uri.Parse(string(url))
 	if e != nil {
 		return nil, e
 	}
 	req := &request{url: u, body: body}
-	if string(contentType) == `application/json` {
+	tp := textproto.NewReader(bufio.NewReader(bytes.NewReader(header)))
+	mimeReader, e := tp.ReadMIMEHeader()
+	req.header = Header(mimeReader)
+
+	if string(method) == MethodPost {
+		contentType := req.header.Get(`Content-Type`)
+
+		if contentType != `application/json` {
+			return nil, errors.New(`POST method only support application/json`)
+		}
 		js, e := json.Parse(body)
 		if e != nil {
 			return nil, e
 		}
+		if js == nil {
+			js = json.Object{}
+		}
 		req.jsonBody = js
 	}
+
 	return req, nil
 }
