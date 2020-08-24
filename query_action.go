@@ -69,7 +69,9 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 	case queryTypeUpdate:
 		data, err = ctx.tx.Exec(q.rawQuery, values...)
 	case queryTypeInsert:
-
+		data, err = ctx.tx.Exec(q.rawQuery, values...)
+	case queryTypeDelete:
+		data, err = ctx.tx.Exec(q.rawQuery, values...)
 	}
 	if err != nil {
 		return nil, fmt.Errorf(errExecutingQuery.Error(), q.rawQuery)
