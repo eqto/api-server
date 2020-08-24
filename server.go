@@ -32,7 +32,8 @@ type Server struct {
 
 	isProduction bool
 
-	cn *db.Connection
+	cn          *db.Connection
+	dbConnected bool
 
 	middleware []middleware
 
@@ -49,7 +50,11 @@ func (s *Server) OpenDatabase(host string, port uint16, username, password, name
 
 //Connect ...
 func (s *Server) Connect() error {
-	return s.cn.Connect()
+	if e := s.cn.Connect(); e != nil {
+		return e
+	}
+	s.dbConnected = true
+	return nil
 }
 
 //SetDatabase ...
@@ -65,6 +70,24 @@ func (s *Server) AddMiddleware(m Middleware) {
 //AddAuthMiddleware ..
 func (s *Server) AddAuthMiddleware(m Middleware) {
 	s.middleware = append(s.middleware, middleware{f: m, isAuth: true})
+}
+
+//AddPostRoute ...
+func (s *Server) AddPostRoute(path string) (*Route, error) {
+	return s.AddRoute(MethodPost, path)
+}
+
+//AddFuncRoute ...
+func (s *Server) AddFuncRoute(path, property string, f ActionFunc) (*Route, error) {
+	r, e := s.AddPostRoute(path)
+	if e != nil {
+		return nil, e
+	}
+	_, e = r.AddFuncAction(f, property)
+	if e != nil {
+		return r, e
+	}
+	return r, nil
 }
 
 //AddRoute ...
@@ -122,6 +145,12 @@ func (s *Server) SetRoute(method, path string, route *Route) error {
 
 //Execute request and Response header and body
 func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
+	if s.cn == nil {
+		return s.newErrorResponse(StatusInternalServerError, errors.New(`no database connection, call SetDatabase or OpenDatabase first`))
+	}
+	if !s.dbConnected {
+		return s.newErrorResponse(StatusInternalServerError, errors.New(`database not opened, call Connect() to open database`))
+	}
 	req, e := parseRequest(method, url, header, body)
 	if e != nil {
 		return s.newErrorResponse(StatusBadRequest, e)
@@ -158,7 +187,8 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 	defer tx.Commit()
 
 	//TODO add session
-	ctx := &actionCtx{tx: tx, req: req, resp: resp, vars: json.Object{}}
+	ctx := &context{tx: tx, req: req, resp: resp, vars: json.Object{}}
+
 	for _, action := range route.action {
 		result, e := action.execute(ctx)
 		if e != nil {

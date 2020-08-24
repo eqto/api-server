@@ -18,7 +18,7 @@ func (r *Route) SetSecure(secure bool) {
 	r.secure = secure
 }
 
-//AddQueryAction add
+//AddQueryAction ...
 func (r *Route) AddQueryAction(query, params, property string) (Action, error) {
 	act, e := newQueryAction(query, property, params)
 	if e != nil {
@@ -26,4 +26,9 @@ func (r *Route) AddQueryAction(query, params, property string) (Action, error) {
 	}
 	r.action = append(r.action, act)
 	return act, nil
+}
+
+//AddFuncAction ...
+func (r *Route) AddFuncAction(f ActionFunc, property string) (Action, error) {
+	return newFuncAction(f, property)
 }

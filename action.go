@@ -9,7 +9,10 @@ const (
 
 //Action ...
 type Action interface {
-	execute(ctx *actionCtx) (interface{}, error)
+	execute(ctx *context) (interface{}, error)
 	property() string
 	params() []string
 }
+
+//ActionFunc ...
+type ActionFunc func(ctx Context) (interface{}, error)

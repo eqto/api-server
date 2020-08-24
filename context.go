@@ -8,37 +8,50 @@ import (
 	"github.com/eqto/go-json"
 )
 
-type actionCtx struct {
+//Context ...
+type Context interface {
+	Request() Request
+	Response() Response
+	Session() Session
+}
+
+type context struct {
 	tx   *db.Tx
 	req  *request
 	resp *response
 
 	vars json.Object
+	sess *session
 }
 
-func (a *actionCtx) Request() Request {
-	return a.req
-}
-func (a *actionCtx) Response() Response {
-	return a.resp
+func (c *context) Request() Request {
+	return c.req
 }
 
-func (a *actionCtx) Tx() *db.Tx {
-	return a.tx
+func (c *context) Response() Response {
+	return c.resp
 }
 
-func (a *actionCtx) put(property string, value interface{}) {
+func (c *context) Session() Session {
+	return c.resp
+}
+
+func (c *context) Tx() *db.Tx {
+	return c.tx
+}
+
+func (c *context) put(property string, value interface{}) {
 	if strings.HasPrefix(property, `$`) { //save to vars
-		a.vars.Put(property[1:], value)
+		c.vars.Put(property[1:], value)
 	} else { //save to result
-		a.resp.Put(property, value)
+		c.resp.Put(property, value)
 	}
 }
-func (a *actionCtx) get(property string) interface{} {
+func (c *context) get(property string) interface{} {
 	if strings.HasPrefix(property, `$`) { //get from to vars
-		return a.vars.Get(property[1:])
+		return c.vars.Get(property[1:])
 	} else { //get from result
-		return a.resp.Get(property)
+		return c.resp.Get(property)
 	}
 }
 
