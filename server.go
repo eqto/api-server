@@ -80,7 +80,7 @@ func (s *Server) AddPostRoute(path string) (*Route, error) {
 	return s.AddRoute(MethodPost, path)
 }
 
-//AddFunc ...
+//AddFunc add secure route with single func action, secure means this route will validated using auth middlewares if any.
 func (s *Server) AddFunc(f ActionFunc) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
@@ -97,6 +97,15 @@ func (s *Server) AddFunc(f ActionFunc) (*Route, error) {
 		return r, e
 	}
 	return r, nil
+}
+
+//AddInsecureFunc add insecure route with single func action, insecure means this route will not validated by auth middlewares.
+func (s *Server) AddInsecureFunc(f ActionFunc) (*Route, error) {
+	r, e := s.AddFunc(f)
+	if r != nil {
+		r.secure = false
+	}
+	return r, e
 }
 
 //AddRoute ...
@@ -200,6 +209,7 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 
 	for _, action := range route.action {
 		result, e := action.execute(ctx)
+
 		if e != nil {
 			tx.Rollback()
 			return s.newErrorResponse(StatusInternalServerError, e)
