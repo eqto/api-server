@@ -81,7 +81,7 @@ func (s *Server) AddPostRoute(path string) (*Route, error) {
 }
 
 //AddFunc ...
-func (s *Server) AddFunc(f ActionFunc, property string) (*Route, error) {
+func (s *Server) AddFunc(f ActionFunc) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
 	if strings.Count(name, `.`) > 1 {
@@ -92,7 +92,7 @@ func (s *Server) AddFunc(f ActionFunc, property string) (*Route, error) {
 	if e != nil {
 		return nil, e
 	}
-	_, e = r.AddFuncAction(f, property)
+	_, e = r.AddFuncAction(f, `data`)
 	if e != nil {
 		return r, e
 	}
