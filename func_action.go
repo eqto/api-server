@@ -11,9 +11,7 @@ func (f *funcAction) execute(ctx *context) (interface{}, error) {
 	if f.f == nil {
 		return nil, errors.New(`nil func`)
 	}
-	f.f(ctx)
-
-	return nil, nil
+	return f.f(ctx)
 }
 func (f *funcAction) property() string {
 	return ``
