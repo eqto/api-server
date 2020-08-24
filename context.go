@@ -13,6 +13,7 @@ type Context interface {
 	Request() Request
 	Response() Response
 	Session() Session
+	Tx() *db.Tx
 }
 
 type context struct {
