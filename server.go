@@ -4,6 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"reflect"
+	"runtime"
+	"strings"
 
 	"github.com/eqto/go-db"
 	"github.com/eqto/go-json"
@@ -77,9 +80,15 @@ func (s *Server) AddPostRoute(path string) (*Route, error) {
 	return s.AddRoute(MethodPost, path)
 }
 
-//AddFuncRoute ...
-func (s *Server) AddFuncRoute(path, property string, f ActionFunc) (*Route, error) {
-	r, e := s.AddPostRoute(path)
+//AddFunc ...
+func (s *Server) AddFunc(f ActionFunc, property string) (*Route, error) {
+	ptr := reflect.ValueOf(f).Pointer()
+	name := runtime.FuncForPC(ptr).Name()
+	if strings.Count(name, `.`) > 1 {
+		return nil, errors.New(`unsupported add inline function`)
+	}
+	name = name[strings.IndexRune(name, '.')+1:]
+	r, e := s.AddPostRoute(`/` + name)
 	if e != nil {
 		return nil, e
 	}
