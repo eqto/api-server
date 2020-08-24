@@ -30,5 +30,10 @@ func (r *Route) AddQueryAction(query, params, property string) (Action, error) {
 
 //AddFuncAction ...
 func (r *Route) AddFuncAction(f ActionFunc, property string) (Action, error) {
-	return newFuncAction(f, property)
+	act, e := newFuncAction(f, property)
+	if e != nil {
+		return nil, e
+	}
+	r.action = append(r.action, act)
+	return act, nil
 }
