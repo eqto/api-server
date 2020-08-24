@@ -16,15 +16,15 @@ type response struct {
 	json.Object
 	Response
 
-	status uint16
 	header Header
 	server *Server
 
+	status   uint16
 	err      error
 	errFrame []log.Frame
 }
 
-func (r *response) Status() int {
+func (r *response) HTTPStatus() int {
 	return int(r.status)
 }
 
@@ -39,18 +39,23 @@ func (r *response) Success() bool {
 
 func (r *response) Body() []byte {
 	js := r.Object.Clone()
-	if !r.server.isProduction && r.err != nil {
+	if !r.server.isProduction && r.errFrame != nil {
 		trace := []string{}
 		for _, frame := range r.errFrame {
 			trace = append(trace, frame.String())
 		}
-		js.Put(`debug.message`, r.err.Error())
-		js.Put(`debug.stacktrace`, trace)
+		js.Put(`stacktrace`, trace)
+	}
+	js.Put(`status`, 0).Put(`message`, `success`)
+	if r.status != 200 {
+		js.Put(`status`, r.status)
+		js.Put(`message`, r.err.Error())
 	}
 	return js.ToBytes()
 }
-
 func (r *response) setError(err error) {
 	r.err = err
-	r.errFrame = log.Stacktrace(2)
+	if !r.server.isProduction {
+		r.errFrame = log.Stacktrace(2)
+	}
 }
