@@ -4,7 +4,8 @@ import "errors"
 
 type funcAction struct {
 	Action
-	f ActionFunc
+	prop string
+	f    ActionFunc
 }
 
 func (f *funcAction) execute(ctx *context) (interface{}, error) {
@@ -14,12 +15,12 @@ func (f *funcAction) execute(ctx *context) (interface{}, error) {
 	return f.f(ctx)
 }
 func (f *funcAction) property() string {
-	return ``
+	return f.prop
 }
 func (f *funcAction) params() []string {
 	return nil
 }
 
 func newFuncAction(f ActionFunc, property string) (*funcAction, error) {
-	return &funcAction{f: f}, nil
+	return &funcAction{f: f, prop: property}, nil
 }
