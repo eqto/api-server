@@ -45,7 +45,7 @@ func (q *queryAction) params() []string {
 	return q.qParams
 }
 
-func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface{}, error) {
+func (q *queryAction) executeItem(ctx *actionCtx, values []interface{}) (interface{}, error) {
 	var data interface{}
 	var err error
 
@@ -79,7 +79,7 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 	return data, nil
 }
 
-func (q *queryAction) populateValues(ctx *context, item json.Object) ([]interface{}, error) {
+func (q *queryAction) populateValues(ctx *actionCtx, item json.Object) ([]interface{}, error) {
 	values := []interface{}{}
 	for _, param := range q.qParams {
 		if strings.HasPrefix(param, q.arrayName+`[`) && strings.HasSuffix(param, `]`) {
@@ -96,7 +96,7 @@ func (q *queryAction) populateValues(ctx *context, item json.Object) ([]interfac
 	return values, nil
 }
 
-func (q *queryAction) execute(ctx *context) (interface{}, error) {
+func (q *queryAction) execute(ctx *actionCtx) (interface{}, error) {
 	if q.arrayName != `` { //execute array
 		array := ctx.req.jsonBody.GetArray(q.arrayName)
 

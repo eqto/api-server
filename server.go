@@ -15,9 +15,10 @@ const (
 	//MethodPost POST
 	MethodPost = `POST`
 
-	StatusBadRequest = 400
-	StatusNotFound   = 404
-	StatusOK         = 200
+	StatusBadRequest   = 400
+	StatusUnauthorized = 401
+	StatusNotFound     = 404
+	StatusOK           = 200
 
 	StatusInternalServerError = 500
 )
@@ -32,6 +33,8 @@ type Server struct {
 	isProduction bool
 
 	cn *db.Connection
+
+	middleware []middleware
 
 	logD func(v ...interface{})
 	logW func(v ...interface{})
@@ -52,6 +55,16 @@ func (s *Server) Connect() error {
 //SetDatabase ...
 func (s *Server) SetDatabase(host string, port uint16, username, password, name string) {
 	s.cn = db.NewEmptyConnection(host, port, username, password, name)
+}
+
+//AddMiddleware ..
+func (s *Server) AddMiddleware(m Middleware) {
+	s.middleware = append(s.middleware, middleware{f: m, isAuth: false})
+}
+
+//AddAuthMiddleware ..
+func (s *Server) AddAuthMiddleware(m Middleware) {
+	s.middleware = append(s.middleware, middleware{f: m, isAuth: true})
 }
 
 //AddRoute ...
@@ -113,11 +126,25 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 	if e != nil {
 		return s.newErrorResponse(StatusBadRequest, e)
 	}
+
 	route, e := s.GetRoute(string(method), req.URL().Path)
 	if e != nil { //route not found
 		return s.newErrorResponse(StatusNotFound, e)
-
 	}
+
+	reqCtx := newRequestCtx(req)
+	if s.middleware != nil {
+		for _, m := range s.middleware {
+			if e := m.f(reqCtx); e != nil {
+				status := StatusInternalServerError
+				if m.isAuth {
+					status = StatusUnauthorized
+				}
+				return s.newErrorResponse(uint16(status), e)
+			}
+		}
+	}
+
 	resp := s.newResponse(StatusOK)
 	tx, e := s.cn.Begin()
 	if e != nil { //db error
@@ -126,7 +153,7 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 	defer tx.Commit()
 
 	//TODO add session
-	ctx := &context{tx: tx, req: req, resp: resp, vars: json.Object{}}
+	ctx := &actionCtx{tx: tx, req: req, resp: resp, vars: json.Object{}}
 	for _, action := range route.action {
 		result, e := action.execute(ctx)
 		if e != nil {

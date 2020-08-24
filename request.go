@@ -17,9 +17,10 @@ type Request interface {
 }
 
 type request struct {
+	method   []byte
 	header   Header
 	body     []byte
-	url      *uri.URL
+	url      uri.URL
 	jsonBody json.Object
 }
 
@@ -45,7 +46,7 @@ func (r *request) get(key string) interface{} {
 	return r.url.Query().Get(key)
 }
 
-func (r *request) URL() *uri.URL {
+func (r *request) URL() uri.URL {
 	return r.url
 }
 
@@ -54,7 +55,10 @@ func parseRequest(method, url, header, body []byte) (*request, error) {
 	if e != nil {
 		return nil, e
 	}
-	req := &request{url: u, body: body}
+	req := &request{method: method, url: *u}
+	if string(method) == MethodPost {
+		req.body = body
+	}
 	tp := textproto.NewReader(bufio.NewReader(bytes.NewReader(header)))
 	mimeReader, e := tp.ReadMIMEHeader()
 	req.header = Header(mimeReader)
