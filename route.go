@@ -10,6 +10,12 @@ type Route struct {
 	path   string
 	method int8
 	action []Action
+	secure bool
+}
+
+//SetSecure ...
+func (r *Route) SetSecure(secure bool) {
+	r.secure = secure
 }
 
 //AddQueryAction add

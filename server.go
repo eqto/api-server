@@ -76,7 +76,7 @@ func (s *Server) AddRoute(method, path string) (*Route, error) {
 	if e != nil {
 		return nil, e
 	}
-	route := &Route{path: path, method: idx}
+	route := &Route{path: path, method: idx, secure: true}
 	s.routeMap[idx][path] = route
 	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
 	return route, nil
@@ -133,14 +133,19 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 	}
 
 	reqCtx := newRequestCtx(req)
+
 	if s.middleware != nil {
 		for _, m := range s.middleware {
-			if e := m.f(reqCtx); e != nil {
-				status := StatusInternalServerError
-				if m.isAuth {
-					status = StatusUnauthorized
+			if m.isAuth {
+				if route.secure {
+					if e := m.f(reqCtx); e != nil {
+						return s.newErrorResponse(StatusUnauthorized, e)
+					}
 				}
-				return s.newErrorResponse(uint16(status), e)
+			} else {
+				if e := m.f(reqCtx); e != nil {
+					return s.newErrorResponse(StatusInternalServerError, e)
+				}
 			}
 		}
 	}
