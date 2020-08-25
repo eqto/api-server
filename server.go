@@ -179,7 +179,9 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 		return s.newErrorResponse(StatusNotFound, e)
 	}
 
-	reqCtx := newRequestCtx(req)
+	sess := &session{}
+
+	reqCtx := newRequestCtx(req, sess)
 
 	if s.middleware != nil {
 		for _, m := range s.middleware {
@@ -205,7 +207,7 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 	defer tx.Commit()
 
 	//TODO add session
-	ctx := &context{tx: tx, req: req, resp: resp, vars: json.Object{}}
+	ctx := &context{tx: tx, req: req, resp: resp, vars: json.Object{}, sess: sess}
 
 	for _, action := range route.action {
 		result, e := action.execute(ctx)

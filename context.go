@@ -1,7 +1,6 @@
 package apims
 
 import (
-	"net/url"
 	"strings"
 
 	"github.com/eqto/go-db"
@@ -20,9 +19,9 @@ type context struct {
 	tx   *db.Tx
 	req  *request
 	resp *response
+	sess *session
 
 	vars json.Object
-	sess *session
 }
 
 func (c *context) Request() Request {
@@ -34,7 +33,7 @@ func (c *context) Response() Response {
 }
 
 func (c *context) Session() Session {
-	return c.resp
+	return c.sess
 }
 
 func (c *context) Tx() *db.Tx {
@@ -54,28 +53,4 @@ func (c *context) get(property string) interface{} {
 	} else { //get from result
 		return c.resp.Get(property)
 	}
-}
-
-//RequestCtx ..
-type RequestCtx interface {
-	Header() Header
-	URL() url.URL
-}
-
-type requestCtx struct {
-	RequestCtx
-
-	req *request
-}
-
-func (r *requestCtx) Header() Header {
-	return r.req.header
-}
-
-func (r *requestCtx) URL() url.URL {
-	return r.req.url
-}
-
-func newRequestCtx(req *request) *requestCtx {
-	return &requestCtx{req: req}
 }
