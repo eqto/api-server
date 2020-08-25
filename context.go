@@ -33,7 +33,7 @@ func (c *context) Response() Response {
 }
 
 func (c *context) Session() Session {
-	return c.sess
+	return &session{val: c.sess.val.Clone()}
 }
 
 func (c *context) Tx() *db.Tx {

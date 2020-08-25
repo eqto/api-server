@@ -1,27 +1,35 @@
 package apims
 
+import "github.com/eqto/go-json"
+
 type Session interface {
+	Put(key string, value interface{})
 	Get(key string) interface{}
-	Put(key string, val interface{})
-}
-type session struct {
-	Session
-	val map[string]interface{}
+	GetString(key string) string
 }
 
-func (s *session) Put(key string, val interface{}) {
+type session struct {
+	Session
+	val json.Object
+}
+
+func (s *session) init() {
 	if s.val == nil {
-		s.val = make(map[string]interface{})
+		s.val = make(json.Object)
 	}
-	s.val[key] = val
+}
+
+func (s *session) Put(key string, value interface{}) {
+	s.init()
+	s.val.Put(key, value)
 }
 
 func (s *session) Get(key string) interface{} {
-	if s.val == nil {
-		s.val = make(map[string]interface{})
-	}
-	if val, ok := s.val[key]; ok {
-		return val
-	}
-	return nil
+	s.init()
+	return s.val.Get(key)
+}
+
+func (s *session) GetString(key string) string {
+	s.init()
+	return s.val.GetString(key)
 }
