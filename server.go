@@ -185,17 +185,26 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 
 	if s.middleware != nil {
 		for _, m := range s.middleware {
+			tx, e := s.cn.Begin()
+			if e != nil { //db error
+				return s.newErrorResponse(StatusInternalServerError, e)
+			}
+			defer tx.Rollback()
+			reqCtx.tx = tx
 			if m.isAuth {
 				if route.secure {
 					if e := m.f(reqCtx); e != nil {
+						tx.Rollback()
 						return s.newErrorResponse(StatusUnauthorized, e)
 					}
 				}
 			} else {
 				if e := m.f(reqCtx); e != nil {
+					tx.Rollback()
 					return s.newErrorResponse(StatusInternalServerError, e)
 				}
 			}
+			tx.Commit()
 		}
 	}
 

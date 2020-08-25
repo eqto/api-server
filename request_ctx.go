@@ -1,12 +1,17 @@
 package apims
 
-import "net/url"
+import (
+	"net/url"
+
+	"github.com/eqto/go-db"
+)
 
 //RequestCtx ..
 type RequestCtx interface {
 	Header() Header
 	URL() url.URL
 	Session() Session
+	Tx() *db.Tx
 }
 
 type requestCtx struct {
@@ -14,6 +19,7 @@ type requestCtx struct {
 
 	req  *request
 	sess *session
+	tx   *db.Tx
 }
 
 func (r *requestCtx) Header() Header {
@@ -23,6 +29,11 @@ func (r *requestCtx) Header() Header {
 func (r *requestCtx) URL() url.URL {
 	return r.req.url
 }
+
+func (r *requestCtx) Tx() *db.Tx {
+	return r.tx
+}
+
 func (r *requestCtx) Session() Session {
 	return r.sess
 }
