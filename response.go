@@ -24,7 +24,7 @@ type response struct {
 	errFrame []log.Frame
 }
 
-func (r *response) HTTPStatus() int {
+func (r *response) Status() int {
 	return int(r.status)
 }
 
