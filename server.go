@@ -101,7 +101,7 @@ func (s *Server) AddSecureFunc(f ActionFunc) (*Route, error) {
 
 //AddFunc add insecure route with single func action, insecure means this route will not validated by auth middlewares.
 func (s *Server) AddFunc(f ActionFunc) (*Route, error) {
-	r, e := s.AddFunc(f)
+	r, e := s.AddSecureFunc(f)
 	if r != nil {
 		r.secure = false
 	}
