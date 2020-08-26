@@ -35,7 +35,7 @@ type Server struct {
 
 	isProduction bool
 
-	cn          *db.Connection
+	db          *db.Connection
 	dbConnected bool
 
 	middleware []middleware
@@ -43,6 +43,11 @@ type Server struct {
 	logD func(v ...interface{})
 	logW func(v ...interface{})
 	logE func(v ...interface{})
+}
+
+//Database ...
+func (s *Server) Database() *db.Connection {
+	return s.db
 }
 
 //OpenDatabase call SetDatabase and Connect
@@ -53,7 +58,7 @@ func (s *Server) OpenDatabase(host string, port uint16, username, password, name
 
 //Connect ...
 func (s *Server) Connect() error {
-	if e := s.cn.Connect(); e != nil {
+	if e := s.db.Connect(); e != nil {
 		return e
 	}
 	s.dbConnected = true
@@ -62,7 +67,7 @@ func (s *Server) Connect() error {
 
 //SetDatabase ...
 func (s *Server) SetDatabase(host string, port uint16, username, password, name string) {
-	s.cn = db.NewEmptyConnection(host, port, username, password, name)
+	s.db = db.NewEmptyConnection(host, port, username, password, name)
 }
 
 //AddMiddleware ..
@@ -163,7 +168,7 @@ func (s *Server) SetRoute(method, path string, route *Route) error {
 
 //Execute request and Response header and body
 func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
-	if s.cn == nil {
+	if s.db == nil {
 		return s.newErrorResponse(StatusInternalServerError, errors.New(`no database connection, call SetDatabase or OpenDatabase first`))
 	}
 	if !s.dbConnected {
@@ -185,7 +190,7 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 
 	if s.middleware != nil {
 		for _, m := range s.middleware {
-			tx, e := s.cn.Begin()
+			tx, e := s.db.Begin()
 			if e != nil { //db error
 				return s.newErrorResponse(StatusInternalServerError, e)
 			}
@@ -209,7 +214,7 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 	}
 
 	resp := s.newResponse(StatusOK)
-	tx, e := s.cn.Begin()
+	tx, e := s.db.Begin()
 	if e != nil { //db error
 		return s.newErrorResponse(StatusInternalServerError, e)
 	}
