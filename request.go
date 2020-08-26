@@ -69,14 +69,16 @@ func parseRequest(method, url, header, body []byte) (*request, error) {
 		if contentType != `application/json` {
 			return nil, errors.New(`POST method only support application/json`)
 		}
-		js, e := json.Parse(body)
-		if e != nil {
-			return nil, e
+		if body != nil {
+			js, e := json.Parse(body)
+			if e != nil {
+				return nil, e
+			}
+			if js == nil {
+				js = json.Object{}
+			}
+			req.jsonBody = js
 		}
-		if js == nil {
-			js = json.Object{}
-		}
-		req.jsonBody = js
 	}
 
 	return req, nil
