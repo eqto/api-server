@@ -39,9 +39,10 @@ func (r *request) get(key string) interface{} {
 	if r.jsonBody != nil {
 		if r.jsonBody.Has(key) {
 			return r.jsonBody.Get(key)
-		} else {
-			return nil
+			// } else {
+			// 	return nil
 		}
+		return nil
 	}
 	return r.url.Query().Get(key)
 }
