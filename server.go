@@ -18,11 +18,16 @@ const (
 	//MethodPost POST
 	MethodPost = `POST`
 
-	StatusBadRequest   = 400
+	//StatusBadRequest ...
+	StatusBadRequest = 400
+	//StatusUnauthorized ...
 	StatusUnauthorized = 401
-	StatusNotFound     = 404
-	StatusOK           = 200
+	//StatusNotFound ...
+	StatusNotFound = 404
+	//StatusOK ...
+	StatusOK = 200
 
+	//StatusInternalServerError ...
 	StatusInternalServerError = 500
 )
 
