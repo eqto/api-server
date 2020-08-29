@@ -2,6 +2,7 @@ package apims
 
 import "github.com/eqto/go-json"
 
+//Session ...
 type Session interface {
 	Put(key string, value interface{})
 	Get(key string) interface{}
