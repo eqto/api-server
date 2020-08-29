@@ -50,7 +50,8 @@ func (c *context) put(property string, value interface{}) {
 func (c *context) get(property string) interface{} {
 	if strings.HasPrefix(property, `$`) { //get from to vars
 		return c.vars.Get(property[1:])
-	} else { //get from result
-		return c.resp.Get(property)
+		// } else { //get from result
+		// return c.resp.Get(property)
 	}
+	return c.resp.Get(property)
 }
