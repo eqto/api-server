@@ -30,9 +30,10 @@ type queryAction struct {
 	qType     uint8
 	qProperty string
 	qParams   []string
-	qBuilder  *db.QueryBuilder
 
-	arrayName string
+	filterEnable bool
+	arrayName    string
+	builder      *db.QueryBuilder
 }
 
 //Property ...
@@ -49,17 +50,27 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 	var data interface{}
 	var err error
 
+	var builder *db.QueryBuilder
+	if (q.qType == queryTypeSelect || q.qType == queryTypeGet) && q.builder != nil {
+		builder = q.builder.Clone()
+		//process filter if exist
+
+		if q.filterEnable {
+		}
+
+	}
+
 	switch q.qType {
 	case queryTypeSelect:
-		if q.qBuilder != nil { //run sql function
-			data, err = ctx.tx.Select(q.qBuilder.ToSQL(), values...)
+		if builder != nil { //run sql function
+			data, err = ctx.tx.Select(builder.ToSQL(), values...)
 			if data == nil {
 				data = []db.Resultset{}
 			}
 		}
 	case queryTypeGet:
-		if q.qBuilder != nil { //run sql function
-			res, e := ctx.tx.Get(q.qBuilder.ToSQL(), values...)
+		if q.builder != nil { //run sql function
+			res, e := ctx.tx.Get(builder.ToSQL(), values...)
 			if e != nil {
 				err = e
 			} else if res != nil {
@@ -82,7 +93,10 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 func (q *queryAction) populateValues(ctx *context, item json.Object) ([]interface{}, error) {
 	values := []interface{}{}
 	for _, param := range q.qParams {
-		if strings.HasPrefix(param, q.arrayName+`[`) && strings.HasSuffix(param, `]`) {
+		if strings.HasPrefix(param, `$session.`) {
+			val := ctx.sess.GetString(param[9:])
+			values = append(values, val)
+		} else if strings.HasPrefix(param, q.arrayName+`[`) && strings.HasSuffix(param, `]`) {
 			val := item.Get(param[len(q.arrayName)+1 : len(param)-1])
 			values = append(values, val)
 		} else {
@@ -128,7 +142,7 @@ func newQueryAction(query, property, params string) (*queryAction, error) {
 	queryType := strings.ToUpper(str[0])
 	switch queryType {
 	case `SELECT`:
-		act.qBuilder = db.ParseQuery(query)
+		act.builder = db.ParseQuery(query)
 		act.qType = queryTypeSelect
 		if regexp.MustCompile(`LIMIT.*\s+1$`).MatchString(strings.ToUpper(query)) {
 			act.qType = queryTypeGet
