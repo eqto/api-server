@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/eqto/go-db"
 	"github.com/eqto/go-json"
@@ -31,7 +32,7 @@ type queryAction struct {
 	qProperty string
 	qParams   []string
 
-	filterEnable bool
+	enableFilter bool
 	arrayName    string
 	builder      *db.QueryBuilder
 }
@@ -54,8 +55,27 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 	if (q.qType == queryTypeSelect || q.qType == queryTypeGet) && q.builder != nil {
 		builder = q.builder.Clone()
 		//process filter if exist
+		if q.enableFilter {
+			filters := ctx.req.jsonBody.GetArray(`filter`)
+			if filters != nil && len(filters) > 0 {
+				for _, filter := range filters {
+					key := filter.GetString(`key`)
+					val := filter.GetString(`value`)
+					switch typ := filter.GetString(`type`); typ {
+					case `date`:
+						builder.WhereOp(key, `>=`)
+						values = append(values, val)
 
-		if q.filterEnable {
+						time, _ := time.Parse(`2006-01-02`, val)
+						time = time.AddDate(0, 0, 1)
+						builder.WhereOp(key, `<`)
+						values = append(values, time.Format(`2006-01-02`))
+					default:
+						builder.Where(key)
+						values = append(values, val)
+					}
+				}
+			}
 		}
 
 	}
