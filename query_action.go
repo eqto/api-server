@@ -61,7 +61,8 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 				for _, filter := range filters {
 					key := filter.GetString(`key`)
 					val := filter.GetString(`value`)
-					switch typ := strings.TrimSpace(filter.GetString(`type`)); typ {
+					typ := strings.ToUpper(strings.TrimSpace(filter.GetString(`type`)))
+					switch typ {
 					case `date`:
 						builder.WhereOp(key, `>=`)
 						values = append(values, val)
@@ -70,6 +71,10 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 						time = time.AddDate(0, 0, 1)
 						builder.WhereOp(key, `<`)
 						values = append(values, time.Format(`2006-01-02`))
+					case `LIKE`:
+						fallthrough
+					case `FULLTEXT`:
+						fallthrough
 					case `>`:
 						fallthrough
 					case `>=`:
