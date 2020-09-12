@@ -10,6 +10,7 @@ import (
 
 	"github.com/eqto/go-db"
 	"github.com/eqto/go-json"
+	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -241,6 +242,25 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 	}
 
 	return resp, nil
+}
+
+//Serve ...
+func (s *Server) Serve(port int) {
+	fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(ctx *fasthttp.RequestCtx) {
+		resp, e := s.Execute(ctx.Method(), ctx.RequestURI(), ctx.Request.Header.RawHeaders(), ctx.Request.Body())
+		if e != nil {
+			s.logW(e)
+		}
+		ctx.SetStatusCode(resp.Status())
+		for key, valArr := range resp.Header() {
+			if len(valArr) > 0 {
+				ctx.Response.Header.Set(key, valArr[0])
+			} else {
+				ctx.Response.Header.Set(key, ``)
+			}
+		}
+		ctx.SetBody(resp.Body())
+	})
 }
 
 //SetProduction ...
