@@ -1,4 +1,4 @@
-package apims
+package api
 
 import (
 	"errors"
@@ -287,7 +287,7 @@ func (s *Server) routeMethod(method, path string) (int8, error) {
 	case MethodPost:
 		return routeMethodPost, nil
 	default:
-		return 0, fmt.Errorf(`unrecognized method %s, choose between apims.MethodGet or apims.MethodPost`, method)
+		return 0, fmt.Errorf(`unrecognized method %s, choose between api.MethodGet or api.MethodPost`, method)
 	}
 }
 

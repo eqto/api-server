@@ -1,4 +1,4 @@
-package apims
+package api
 
 const (
 	routeMethodGet  int8 = 1

@@ -1,4 +1,4 @@
-package apims
+package api
 
 import "github.com/eqto/go-json"
 

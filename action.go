@@ -1,4 +1,4 @@
-package apims
+package api
 
 const (
 	actionTypeList = iota

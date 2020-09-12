@@ -1,4 +1,4 @@
-module github.com/eqto/apims
+module github.com/eqto/api-server
 
 go 1.15
 
