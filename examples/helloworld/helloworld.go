@@ -10,8 +10,8 @@ import (
 func main() {
 	s := api.New()
 
-	s.AddFunc(Hello)
-	s.AddFunc(HelloError)
+	s.AddFunc(Hello)      //add endpoint /Hello
+	s.AddFunc(HelloError) //add endpoint /HelloError
 
 	if e := s.Serve(8000); e != nil {
 		log.Println(e)
