@@ -26,7 +26,7 @@ func main() {
 //     "message": "success",
 //     "status": 0
 // }
-func Hello(f api.Context) (interface{}, error) {
+func Hello(ctx api.Context) (interface{}, error) {
 	return `hello world`, nil
 }
 
@@ -37,6 +37,6 @@ func Hello(f api.Context) (interface{}, error) {
 //     "message": "success",
 //     "status": 0
 // }
-func HelloError(f api.Context) (interface{}, error) {
+func HelloError(ctx api.Context) (interface{}, error) {
 	return nil, errors.New(`this is error`)
 }

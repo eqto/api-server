@@ -9,6 +9,7 @@ import (
 //RequestCtx ..
 type RequestCtx interface {
 	Header() Header
+	Body() []byte
 	URL() url.URL
 	Session() Session
 	Tx() *db.Tx
@@ -25,6 +26,10 @@ type requestCtx struct {
 
 func (r *requestCtx) Header() Header {
 	return r.req.header
+}
+
+func (r *requestCtx) Body() []byte {
+	return r.req.body
 }
 
 func (r *requestCtx) URL() url.URL {
