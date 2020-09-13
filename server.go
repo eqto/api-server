@@ -41,7 +41,7 @@ type Server struct {
 
 	isProduction bool
 
-	db          *db.Connection
+	cn          *db.Connection
 	dbConnected bool
 
 	middleware []middleware
@@ -53,7 +53,7 @@ type Server struct {
 
 //Database ...
 func (s *Server) Database() *db.Connection {
-	return s.db
+	return s.cn
 }
 
 //OpenDatabase call SetDatabase and Connect
@@ -64,7 +64,7 @@ func (s *Server) OpenDatabase(host string, port uint16, username, password, name
 
 //Connect ...
 func (s *Server) Connect() error {
-	if e := s.db.Connect(); e != nil {
+	if e := s.cn.Connect(); e != nil {
 		return e
 	}
 	s.dbConnected = true
@@ -73,7 +73,7 @@ func (s *Server) Connect() error {
 
 //SetDatabase ...
 func (s *Server) SetDatabase(host string, port uint16, username, password, name string) {
-	s.db = db.NewEmptyConnection(host, port, username, password, name)
+	s.cn = db.NewEmptyConnection(host, port, username, password, name)
 }
 
 //AddMiddleware ..
@@ -186,7 +186,7 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 
 	sess := &session{}
 
-	reqCtx := newRequestCtx(s.db, req, sess)
+	reqCtx := newRequestCtx(s.cn, req, sess)
 
 	if s.middleware != nil {
 		for _, m := range s.middleware {
