@@ -19,6 +19,7 @@ type requestCtx struct {
 
 	req  *request
 	sess *session
+	cn   *db.Connection
 	tx   *db.Tx
 }
 
@@ -38,6 +39,27 @@ func (r *requestCtx) Session() Session {
 	return r.sess
 }
 
-func newRequestCtx(req *request, sess *session) *requestCtx {
-	return &requestCtx{req: req, sess: sess}
+func (r *requestCtx) begin() error {
+	if r.cn != nil {
+		tx, e := r.cn.Begin()
+		if e != nil { //db error
+			return e
+		}
+		r.tx = tx
+	}
+	return nil
+}
+func (r *requestCtx) rollback() {
+	if r.tx != nil {
+		r.tx.Rollback()
+	}
+}
+func (r *requestCtx) commit() {
+	if r.tx != nil {
+		r.tx.Commit()
+	}
+}
+
+func newRequestCtx(cn *db.Connection, req *request, sess *session) *requestCtx {
+	return &requestCtx{cn: cn, req: req, sess: sess}
 }

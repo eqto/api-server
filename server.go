@@ -174,12 +174,6 @@ func (s *Server) SetRoute(method, path string, route *Route) error {
 
 //Execute request and Response header and body
 func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
-	if s.db == nil {
-		return s.newErrorResponse(StatusInternalServerError, errors.New(`no database connection, call SetDatabase or OpenDatabase first`))
-	}
-	if !s.dbConnected {
-		return s.newErrorResponse(StatusInternalServerError, errors.New(`database not opened, call Connect() to open database`))
-	}
 	req, e := parseRequest(method, url, header, body)
 	if e != nil {
 		return s.newErrorResponse(StatusBadRequest, e)
@@ -192,48 +186,46 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 
 	sess := &session{}
 
-	reqCtx := newRequestCtx(req, sess)
+	reqCtx := newRequestCtx(s.db, req, sess)
 
 	if s.middleware != nil {
 		for _, m := range s.middleware {
-			tx, e := s.db.Begin()
-			if e != nil { //db error
+			if e := reqCtx.begin(); e != nil {
 				return s.newErrorResponse(StatusInternalServerError, e)
 			}
-			defer tx.Rollback()
-			reqCtx.tx = tx
+			defer reqCtx.rollback()
 			if m.isAuth {
 				if route.secure {
 					if e := m.f(reqCtx); e != nil {
-						tx.Rollback()
+						reqCtx.rollback()
 						return s.newErrorResponse(StatusUnauthorized, e)
 					}
 				}
 			} else {
 				if e := m.f(reqCtx); e != nil {
-					tx.Rollback()
+					reqCtx.rollback()
 					return s.newErrorResponse(StatusInternalServerError, e)
 				}
 			}
-			tx.Commit()
+			reqCtx.commit()
 		}
 	}
 
 	resp := s.newResponse(StatusOK)
-	tx, e := s.db.Begin()
-	if e != nil { //db error
+
+	if e := reqCtx.begin(); e != nil {
 		return s.newErrorResponse(StatusInternalServerError, e)
 	}
-	defer tx.Commit()
+	defer reqCtx.commit()
 
 	//TODO add session
-	ctx := &context{tx: tx, req: req, resp: resp, vars: json.Object{}, sess: sess}
+	ctx := &context{tx: reqCtx.tx, req: req, resp: resp, vars: json.Object{}, sess: sess}
 
 	for _, action := range route.action {
 		result, e := action.execute(ctx)
 
 		if e != nil {
-			tx.Rollback()
+			reqCtx.rollback()
 			return s.newErrorResponse(StatusInternalServerError, e)
 		}
 		if prop := action.property(); prop != `` {
@@ -245,8 +237,8 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 }
 
 //Serve ...
-func (s *Server) Serve(port int) {
-	fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(ctx *fasthttp.RequestCtx) {
+func (s *Server) Serve(port int) error {
+	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(ctx *fasthttp.RequestCtx) {
 		resp, e := s.Execute(ctx.Method(), ctx.RequestURI(), ctx.Request.Header.RawHeaders(), ctx.Request.Body())
 		if e != nil {
 			s.logW(e)
@@ -313,8 +305,8 @@ func (s *Server) error(v ...interface{}) {
 	s.logW(v...)
 }
 
-//NewServer ...
-func NewServer() *Server {
+//New ...
+func New() *Server {
 	s := &Server{
 		routeMap: make(map[int8]map[string]*Route),
 		logD:     log.Println,
