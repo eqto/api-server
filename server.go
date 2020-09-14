@@ -119,6 +119,16 @@ func (s *Server) AddFunc(f ActionFunc) (*Route, error) {
 	return r, e
 }
 
+//AddRouteFunc add custom path insecure route with single func action, insecure means this route will not validated by auth middlewares.
+func (s *Server) AddRouteFunc(path string, f ActionFunc) (*Route, error) {
+	r, e := s.AddPostRoute(path)
+	if e != nil {
+		return nil, e
+	}
+	_, e = r.AddFuncAction(f, `data`)
+	return r, e
+}
+
 //AddRoute ...
 func (s *Server) AddRoute(method, path string) (*Route, error) {
 	if s.routeMap == nil {
