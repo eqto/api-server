@@ -11,7 +11,7 @@ func main() {
 	s := api.New()
 
 	s.AddFunc(Hello)      //add endpoint /Hello
-	s.AddFunc(HelloError) //add endpoint /HelloError
+	s.AddFunc(World) //add endpoint /World
 
 	if e := s.Serve(8000); e != nil {
 		log.Println(e)
@@ -30,13 +30,13 @@ func Hello(ctx api.Context) (interface{}, error) {
 	return `hello world`, nil
 }
 
-//HelloError endpoint http://host:port/HelloError
+//World endpoint http://host:port/World
 // output:
 // {
-//     "data": "test",
+//     "data": "this is error",
 //     "message": "success",
-//     "status": 0
+//     "status": 500
 // }
-func HelloError(ctx api.Context) (interface{}, error) {
+func World(ctx api.Context) (interface{}, error) {
 	return nil, errors.New(`this is error`)
 }
