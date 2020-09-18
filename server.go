@@ -86,9 +86,14 @@ func (s *Server) AddAuthMiddleware(m Middleware) {
 	s.middleware = append(s.middleware, middleware{f: m, isAuth: true})
 }
 
-//AddPostRoute ...
-func (s *Server) AddPostRoute(path string) (*Route, error) {
-	return s.AddRoute(MethodPost, path)
+//NewGetRoute ...
+func (s *Server) NewGetRoute(path string) (*Route, error) {
+	return s.NewRoute(MethodGet, path)
+}
+
+//NewPostRoute ...
+func (s *Server) NewPostRoute(path string) (*Route, error) {
+	return s.NewRoute(MethodPost, path)
 }
 
 //AddSecureFunc add secure route with single func action, secure means this route will validated using auth middlewares if any.
@@ -99,7 +104,7 @@ func (s *Server) AddSecureFunc(f ActionFunc) (*Route, error) {
 		return nil, errors.New(`unsupported add inline function`)
 	}
 	name = name[strings.IndexRune(name, '.')+1:]
-	r, e := s.AddPostRoute(`/` + name)
+	r, e := s.NewPostRoute(`/` + name)
 	if e != nil {
 		return nil, e
 	}
@@ -121,7 +126,7 @@ func (s *Server) AddFunc(f ActionFunc) (*Route, error) {
 
 //AddRouteFunc add custom path insecure route with single func action, insecure means this route will not validated by auth middlewares.
 func (s *Server) AddRouteFunc(path string, f ActionFunc) (*Route, error) {
-	r, e := s.AddPostRoute(path)
+	r, e := s.NewPostRoute(path)
 	if e != nil {
 		return nil, e
 	}
@@ -129,8 +134,8 @@ func (s *Server) AddRouteFunc(path string, f ActionFunc) (*Route, error) {
 	return r, e
 }
 
-//AddRoute ...
-func (s *Server) AddRoute(method, path string) (*Route, error) {
+//NewRoute ...
+func (s *Server) NewRoute(method, path string) (*Route, error) {
 	if s.routeMap == nil {
 		return nil, errors.New(`unable to create route, please use NewServer() to create new server`)
 	}
@@ -145,8 +150,8 @@ func (s *Server) AddRoute(method, path string) (*Route, error) {
 }
 
 //AddDataRoute add query with action result to property named "data"
-func (s *Server) AddDataRoute(method, path, query, params string) (*Route, error) {
-	r, e := s.AddRoute(method, path)
+func (s *Server) NewDataRoute(method, path, query, params string) (*Route, error) {
+	r, e := s.NewRoute(method, path)
 	if e != nil {
 		return nil, e
 	}
