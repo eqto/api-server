@@ -149,8 +149,8 @@ func (s *Server) NewRoute(method, path string) (*Route, error) {
 	return route, nil
 }
 
-//AddDataRoute add query with action result to property named "data"
-func (s *Server) NewDataRoute(method, path, query, params string) (*Route, error) {
+//NewQueryRoute add query with action result to property named "data"
+func (s *Server) NewQueryRoute(method, path, query, params string) (*Route, error) {
 	r, e := s.NewRoute(method, path)
 	if e != nil {
 		return nil, e
