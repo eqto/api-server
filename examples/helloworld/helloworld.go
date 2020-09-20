@@ -10,7 +10,7 @@ import (
 func main() {
 	s := api.New()
 
-	s.AddFunc(Hello)      //add endpoint /Hello
+	s.AddFunc(Hello) //add endpoint /Hello
 	s.AddFunc(World) //add endpoint /World
 
 	if e := s.Serve(8000); e != nil {
