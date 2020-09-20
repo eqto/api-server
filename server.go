@@ -86,16 +86,6 @@ func (s *Server) AddAuthMiddleware(m Middleware) {
 	s.middleware = append(s.middleware, middleware{f: m, isAuth: true})
 }
 
-//NewGetRoute ...
-func (s *Server) NewGetRoute(path string) (*Route, error) {
-	return s.NewRoute(MethodGet, path)
-}
-
-//NewPostRoute ...
-func (s *Server) NewPostRoute(path string) (*Route, error) {
-	return s.NewRoute(MethodPost, path)
-}
-
 //AddSecureFunc add secure route with single func action, secure means this route will validated using auth middlewares if any.
 func (s *Server) AddSecureFunc(f ActionFunc) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
@@ -104,7 +94,7 @@ func (s *Server) AddSecureFunc(f ActionFunc) (*Route, error) {
 		return nil, errors.New(`unsupported add inline function`)
 	}
 	name = name[strings.IndexRune(name, '.')+1:]
-	r, e := s.NewPostRoute(`/` + name)
+	r, e := s.NewRoute(MethodPost, `/`+name)
 	if e != nil {
 		return nil, e
 	}
@@ -126,7 +116,7 @@ func (s *Server) AddFunc(f ActionFunc) (*Route, error) {
 
 //AddRouteFunc add custom path insecure route with single func action, insecure means this route will not validated by auth middlewares.
 func (s *Server) AddRouteFunc(path string, f ActionFunc) (*Route, error) {
-	r, e := s.NewPostRoute(path)
+	r, e := s.NewRoute(MethodPost, path)
 	if e != nil {
 		return nil, e
 	}
