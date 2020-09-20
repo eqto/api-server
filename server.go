@@ -57,7 +57,7 @@ func (s *Server) Database() *db.Connection {
 }
 
 //OpenDatabase call SetDatabase and Connect
-func (s *Server) OpenDatabase(host string, port uint16, username, password, name string) error {
+func (s *Server) OpenDatabase(host string, port int, username, password, name string) error {
 	s.SetDatabase(host, port, username, password, name)
 	return s.Connect()
 }
@@ -72,8 +72,8 @@ func (s *Server) Connect() error {
 }
 
 //SetDatabase ...
-func (s *Server) SetDatabase(host string, port uint16, username, password, name string) {
-	s.cn = db.NewEmptyConnection(host, port, username, password, name)
+func (s *Server) SetDatabase(host string, port int, username, password, name string) {
+	s.cn, _ = db.NewEmptyConnection(host, port, username, password, name)
 }
 
 //AddMiddleware ..
