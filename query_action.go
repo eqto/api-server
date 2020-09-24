@@ -99,6 +99,9 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 	switch q.qType {
 	case queryTypeSelect:
 		if builder != nil { //run sql function
+			if builder.LimitLength() == 0 {
+				builder.Limit(builder.LimitStart(), 100)
+			}
 			data, err = ctx.tx.Select(builder.ToSQL(), values...)
 			if data == nil {
 				data = []db.Resultset{}
