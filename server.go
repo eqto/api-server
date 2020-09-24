@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -37,6 +38,7 @@ type Server struct {
 	routeMap map[string]map[string]*Route
 
 	defaultContentType string
+	normalize          bool
 
 	isProduction bool
 
@@ -132,6 +134,7 @@ func (s *Server) NewRoute(method, path string) (*Route, error) {
 	if method != MethodGet && method != MethodPost {
 		return nil, fmt.Errorf(`unable to create route, method %s not supported. Please choose POST or GET`, method)
 	}
+	path = s.normalizePath(path)
 	route := &Route{path: path, method: method, secure: true}
 	s.routeMap[method][path] = route
 	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
@@ -168,6 +171,11 @@ func (s *Server) SetRoute(method, path string, route *Route) error {
 	method = strings.ToUpper(method)
 	s.routeMap[method][path] = route
 	return nil
+}
+
+//NormalizeFunc if yes from this and beyond all Func added will renamed to lowercase, separated with underscore. Ex: HelloWorld registered as hello_world
+func (s *Server) NormalizeFunc(n bool) {
+	s.normalize = n
 }
 
 //Execute request and Response header and body
@@ -279,6 +287,26 @@ func (s *Server) routeMethod(method, path string) (int8, error) {
 	default:
 		return 0, fmt.Errorf(`unrecognized method %s, choose between api.MethodGet or api.MethodPost`, method)
 	}
+}
+
+func (s *Server) normalizePath(path string) string {
+	if s.normalize {
+		regex := regexp.MustCompile(`([A-Z]+)`)
+		path = regex.ReplaceAllString(path, `_$1`)
+		path = strings.ToLower(path)
+		validPath := false
+		if strings.HasPrefix(path, `/`) {
+			validPath = true
+			path = path[1:]
+		}
+		if strings.HasPrefix(path, `_`) {
+			path = path[1:]
+		}
+		if validPath {
+			path = `/` + path
+		}
+	}
+	return path
 }
 
 func (s *Server) newErrorResponse(status uint16, err error) (*response, error) {

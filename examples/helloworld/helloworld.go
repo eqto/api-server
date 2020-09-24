@@ -9,9 +9,11 @@ import (
 
 func main() {
 	s := api.New()
+	// uncomment this line to change
+	// s.NormalizeFunc(true)
 
-	s.AddFunc(Hello) //add endpoint /Hello
-	s.AddFunc(World) //add endpoint /World
+	s.AddFunc(Hello)      //add endpoint /Hello
+	s.AddFunc(HelloWorld) //add endpoint /HelloWorld or /hello_world
 
 	if e := s.Serve(8000); e != nil {
 		log.Println(e)
@@ -30,13 +32,13 @@ func Hello(ctx api.Context) (interface{}, error) {
 	return `hello world`, nil
 }
 
-//World endpoint http://host:port/World
+//HelloWorld endpoint http://host:port/HelloWorld if normalize false, or http://host:port/hello_world if normalize true
 // output:
 // {
 //     "data": "this is error",
 //     "message": "success",
 //     "status": 500
 // }
-func World(ctx api.Context) (interface{}, error) {
+func HelloWorld(ctx api.Context) (interface{}, error) {
 	return nil, errors.New(`this is error`)
 }
