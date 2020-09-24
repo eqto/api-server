@@ -15,9 +15,9 @@ import (
 
 const (
 	//MethodGet GET
-	MethodGet = `GET`
+	MethodGet string = `GET`
 	//MethodPost POST
-	MethodPost = `POST`
+	MethodPost string = `POST`
 
 	//StatusBadRequest ...
 	StatusBadRequest = 400
@@ -34,8 +34,7 @@ const (
 
 //Server ...
 type Server struct {
-	//index = routeMethodGet or routeMethodPost
-	routeMap map[int8]map[string]*Route
+	routeMap map[string]map[string]*Route
 
 	defaultContentType string
 
@@ -129,12 +128,12 @@ func (s *Server) NewRoute(method, path string) (*Route, error) {
 	if s.routeMap == nil {
 		return nil, errors.New(`unable to create route, please use NewServer() to create new server`)
 	}
-	idx, e := s.routeMethod(method, path)
-	if e != nil {
-		return nil, e
+	method = strings.ToUpper(method)
+	if method != MethodGet && method != MethodPost {
+		return nil, fmt.Errorf(`unable to create route, method %s not supported. Please choose POST or GET`, method)
 	}
-	route := &Route{path: path, method: idx, secure: true}
-	s.routeMap[idx][path] = route
+	route := &Route{path: path, method: method, secure: true}
+	s.routeMap[method][path] = route
 	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
 	return route, nil
 }
@@ -154,11 +153,8 @@ func (s *Server) NewQueryRoute(method, path, query, params string) (*Route, erro
 
 //GetRoute ...
 func (s *Server) GetRoute(method, path string) (*Route, error) {
-	idx, e := s.routeMethod(method, path)
-	if e != nil {
-		return nil, e
-	}
-	if r, ok := s.routeMap[idx][path]; ok {
+	method = strings.ToUpper(method)
+	if r, ok := s.routeMap[method][path]; ok {
 		return r, nil
 	}
 	return nil, fmt.Errorf(`route %s %s not found`, method, path)
@@ -169,11 +165,8 @@ func (s *Server) SetRoute(method, path string, route *Route) error {
 	if s.routeMap == nil {
 		return errors.New(`unable to set route, please use NewServer() to create new server`)
 	}
-	idx, e := s.routeMethod(method, path)
-	if e != nil {
-		return e
-	}
-	s.routeMap[idx][path] = route
+	method = strings.ToUpper(method)
+	s.routeMap[method][path] = route
 	return nil
 }
 
@@ -313,12 +306,12 @@ func (s *Server) error(v ...interface{}) {
 //New ...
 func New() *Server {
 	s := &Server{
-		routeMap: make(map[int8]map[string]*Route),
+		routeMap: make(map[string]map[string]*Route),
 		logD:     log.Println,
 		logW:     log.Println,
 		logE:     log.Println,
 	}
-	s.routeMap[routeMethodGet] = make(map[string]*Route)
-	s.routeMap[routeMethodPost] = make(map[string]*Route)
+	s.routeMap[MethodGet] = make(map[string]*Route)
+	s.routeMap[MethodPost] = make(map[string]*Route)
 	return s
 }

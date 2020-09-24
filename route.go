@@ -8,7 +8,7 @@ const (
 //Route ...
 type Route struct {
 	path   string
-	method int8
+	method string
 	action []Action
 	secure bool
 }
