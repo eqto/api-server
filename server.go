@@ -87,71 +87,36 @@ func (s *Server) AddAuthMiddleware(m Middleware) {
 	s.middleware = append(s.middleware, middleware{f: m, isAuth: true})
 }
 
-//AddSecureFunc add secure route with single func action, secure means this route will validated using auth middlewares if any.
-func (s *Server) AddSecureFunc(f ActionFunc) (*Route, error) {
+//SetRoute ...
+func (s *Server) SetRoute(route *Route) {
+	if s.routeMap == nil {
+		s.routeMap = make(map[string]map[string]*Route)
+		s.routeMap[MethodGet] = make(map[string]*Route)
+		s.routeMap[MethodPost] = make(map[string]*Route)
+	}
+	path := route.path
+	if s.normalize {
+		path = s.normalizePath(path)
+		route.path = path
+	}
+	s.routeMap[route.method][path] = route
+	s.debug(fmt.Sprintf(`add route %s %s`, route.method, route.path))
+}
+
+//AddFuncRoute add route with single func action. When secure is true, this route will validated using auth middlewares if any.
+func (s *Server) AddFuncRoute(f ActionFunc, secure bool) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
 	if strings.Count(name, `.`) > 1 {
 		return nil, errors.New(`unsupported add inline function`)
 	}
 	name = name[strings.IndexRune(name, '.')+1:]
-	r, e := s.NewRoute(MethodPost, `/`+name)
-	if e != nil {
+	route := NewRoute(MethodPost, `/`+name)
+	if _, e := route.AddFuncAction(f, `data`); e != nil {
 		return nil, e
 	}
-	_, e = r.AddFuncAction(f, `data`)
-	if e != nil {
-		return r, e
-	}
-	return r, nil
-}
-
-//AddFunc add insecure route with single func action, insecure means this route will not validated by auth middlewares.
-func (s *Server) AddFunc(f ActionFunc) (*Route, error) {
-	r, e := s.AddSecureFunc(f)
-	if r != nil {
-		r.secure = false
-	}
-	return r, e
-}
-
-//AddRouteFunc add custom path insecure route with single func action, insecure means this route will not validated by auth middlewares.
-func (s *Server) AddRouteFunc(path string, f ActionFunc) (*Route, error) {
-	r, e := s.NewRoute(MethodPost, path)
-	if e != nil {
-		return nil, e
-	}
-	_, e = r.AddFuncAction(f, `data`)
-	return r, e
-}
-
-//NewRoute ...
-func (s *Server) NewRoute(method, path string) (*Route, error) {
-	if s.routeMap == nil {
-		return nil, errors.New(`unable to create route, please use NewServer() to create new server`)
-	}
-	method = strings.ToUpper(method)
-	if method != MethodGet && method != MethodPost {
-		return nil, fmt.Errorf(`unable to create route, method %s not supported. Please choose POST or GET`, method)
-	}
-	path = s.normalizePath(path)
-	route := &Route{path: path, method: method, secure: true}
-	s.routeMap[method][path] = route
-	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
+	s.SetRoute(route)
 	return route, nil
-}
-
-//NewQueryRoute add query with action result to property named "data"
-func (s *Server) NewQueryRoute(method, path, query, params string) (*Route, error) {
-	r, e := s.NewRoute(method, path)
-	if e != nil {
-		return nil, e
-	}
-	_, e = r.AddQueryAction(query, params, `data`)
-	if e != nil {
-		return r, e
-	}
-	return r, nil
 }
 
 //GetRoute ...
@@ -161,16 +126,6 @@ func (s *Server) GetRoute(method, path string) (*Route, error) {
 		return r, nil
 	}
 	return nil, fmt.Errorf(`route %s %s not found`, method, path)
-}
-
-//SetRoute ...
-func (s *Server) SetRoute(method, path string, route *Route) error {
-	if s.routeMap == nil {
-		return errors.New(`unable to set route, please use NewServer() to create new server`)
-	}
-	method = strings.ToUpper(method)
-	s.routeMap[method][path] = route
-	return nil
 }
 
 //NormalizeFunc if yes from this and beyond all Func added will renamed to lowercase, separated with underscore. Ex: HelloWorld registered as hello_world
@@ -290,21 +245,19 @@ func (s *Server) routeMethod(method, path string) (int8, error) {
 }
 
 func (s *Server) normalizePath(path string) string {
-	if s.normalize {
-		regex := regexp.MustCompile(`([A-Z]+)`)
-		path = regex.ReplaceAllString(path, `_$1`)
-		path = strings.ToLower(path)
-		validPath := false
-		if strings.HasPrefix(path, `/`) {
-			validPath = true
-			path = path[1:]
-		}
-		if strings.HasPrefix(path, `_`) {
-			path = path[1:]
-		}
-		if validPath {
-			path = `/` + path
-		}
+	regex := regexp.MustCompile(`([A-Z]+)`)
+	path = regex.ReplaceAllString(path, `_$1`)
+	path = strings.ToLower(path)
+	validPath := false
+	if strings.HasPrefix(path, `/`) {
+		validPath = true
+		path = path[1:]
+	}
+	if strings.HasPrefix(path, `_`) {
+		path = path[1:]
+	}
+	if validPath {
+		path = `/` + path
 	}
 	return path
 }

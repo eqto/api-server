@@ -12,8 +12,8 @@ func main() {
 	// uncomment this line to change
 	// s.NormalizeFunc(true)
 
-	s.AddFunc(Hello)      //add endpoint /Hello
-	s.AddFunc(HelloWorld) //add endpoint /HelloWorld or /hello_world
+	s.AddFuncRoute(Hello, false)      //add endpoint /Hello
+	s.AddFuncRoute(HelloWorld, false) //add endpoint /HelloWorld or /hello_world
 
 	if e := s.Serve(8000); e != nil {
 		log.Println(e)

@@ -13,7 +13,7 @@ func main() {
 	s.SetProduction() //remove stacktrace and debug log
 
 	s.AddAuthMiddleware(Auth)
-	s.AddSecureFunc(Home)
+	s.AddFuncRoute(Home, true)
 
 	if e := s.Serve(8000); e != nil {
 		log.Println(e)

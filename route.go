@@ -1,5 +1,9 @@
 package api
 
+import (
+	"strings"
+)
+
 const (
 	routeMethodGet  int8 = 1
 	routeMethodPost int8 = 2
@@ -36,4 +40,10 @@ func (r *Route) AddFuncAction(f ActionFunc, property string) (Action, error) {
 	}
 	r.action = append(r.action, act)
 	return act, nil
+}
+
+//NewRoute create route
+func NewRoute(method, path string) *Route {
+	method = strings.ToUpper(method)
+	return &Route{path: path, method: method, secure: true}
 }
