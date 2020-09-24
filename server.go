@@ -119,6 +119,16 @@ func (s *Server) AddFuncRoute(f ActionFunc, secure bool) (*Route, error) {
 	return route, nil
 }
 
+//AddQueryRoute add route with single query action. When secure is true, this route will validated using auth middlewares if any.
+func (s *Server) AddQueryRoute(path, query, params string, secure bool) (*Route, error) {
+	route := NewRoute(MethodPost, path)
+	if _, e := route.AddQueryAction(query, params, `data`); e != nil {
+		return nil, e
+	}
+	s.SetRoute(route)
+	return route, nil
+}
+
 //GetRoute ...
 func (s *Server) GetRoute(method, path string) (*Route, error) {
 	method = strings.ToUpper(method)
