@@ -13,6 +13,7 @@ import (
 //Request ...
 type Request interface {
 	Header() Header
+	URL() uri.URL
 	JSONBody() json.Object
 }
 
@@ -26,6 +27,10 @@ type request struct {
 
 func (r *request) Header() Header {
 	return r.header
+}
+
+func (r *request) URL() uri.URL {
+	return r.url
 }
 
 func (r *request) JSONBody() json.Object {
@@ -45,10 +50,6 @@ func (r *request) get(key string) interface{} {
 		return nil
 	}
 	return r.url.Query().Get(key)
-}
-
-func (r *request) URL() uri.URL {
-	return r.url
 }
 
 func parseRequest(method, url, header, body []byte) (*request, error) {
