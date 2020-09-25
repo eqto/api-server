@@ -47,3 +47,10 @@ func NewRoute(method, path string) *Route {
 	method = strings.ToUpper(method)
 	return &Route{path: path, method: method, secure: true}
 }
+
+//NewFuncRoute create POST route with single func action
+func NewFuncRoute(path string, f ActionFunc) *Route {
+	route := NewRoute(MethodPost, path)
+	route.AddFuncAction(f, `data`)
+	return route
+}
