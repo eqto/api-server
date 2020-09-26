@@ -36,6 +36,7 @@ const (
 //Server ...
 type Server struct {
 	routeMap map[string]map[string]*Route
+	proxies  []proxy
 
 	defaultContentType string
 	normalize          bool
@@ -151,60 +152,13 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 	}
 
 	route, e := s.GetRoute(string(method), req.URL().Path)
-	if e != nil { //route not found
-		return s.newErrorResponse(StatusNotFound, e)
+	if e == nil {
+		sess := &session{}
+		reqCtx := newRequestCtx(s.cn, req, sess)
+		return route.execute(s, reqCtx)
 	}
-
-	sess := &session{}
-
-	reqCtx := newRequestCtx(s.cn, req, sess)
-
-	if s.middleware != nil {
-		for _, m := range s.middleware {
-			if e := reqCtx.begin(); e != nil {
-				return s.newErrorResponse(StatusInternalServerError, e)
-			}
-			defer reqCtx.rollback()
-			if m.isAuth {
-				if route.secure {
-					if e := m.f(reqCtx); e != nil {
-						reqCtx.rollback()
-						return s.newErrorResponse(StatusUnauthorized, e)
-					}
-				}
-			} else {
-				if e := m.f(reqCtx); e != nil {
-					reqCtx.rollback()
-					return s.newErrorResponse(StatusInternalServerError, e)
-				}
-			}
-			reqCtx.commit()
-		}
-	}
-
-	resp := s.newResponse(StatusOK)
-
-	if e := reqCtx.begin(); e != nil {
-		return s.newErrorResponse(StatusInternalServerError, e)
-	}
-	defer reqCtx.commit()
-
-	//TODO add session
-	ctx := &context{tx: reqCtx.tx, req: req, resp: resp, vars: json.Object{}, sess: sess}
-
-	for _, action := range route.action {
-		result, e := action.execute(ctx)
-
-		if e != nil {
-			reqCtx.rollback()
-			return s.newErrorResponse(StatusInternalServerError, e)
-		}
-		if prop := action.property(); prop != `` {
-			ctx.put(prop, result)
-		}
-	}
-
-	return resp, nil
+	//route not found
+	return s.newErrorResponse(StatusNotFound, e)
 }
 
 //Serve ...

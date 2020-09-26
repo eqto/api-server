@@ -2,6 +2,8 @@ package api
 
 import (
 	"strings"
+
+	"github.com/eqto/go-json"
 )
 
 const (
@@ -40,6 +42,55 @@ func (r *Route) AddFuncAction(f func(ctx Context) (interface{}, error), property
 	}
 	r.action = append(r.action, act)
 	return act, nil
+}
+
+func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
+	if s.middleware != nil {
+		for _, m := range s.middleware {
+			if e := reqCtx.begin(); e != nil {
+				return s.newErrorResponse(StatusInternalServerError, e)
+			}
+			defer reqCtx.rollback()
+			if m.isAuth {
+				if r.secure {
+					if e := m.f(reqCtx); e != nil {
+						reqCtx.rollback()
+						return s.newErrorResponse(StatusUnauthorized, e)
+					}
+				}
+			} else {
+				if e := m.f(reqCtx); e != nil {
+					reqCtx.rollback()
+					return s.newErrorResponse(StatusInternalServerError, e)
+				}
+			}
+			reqCtx.commit()
+		}
+	}
+
+	resp := s.newResponse(StatusOK)
+
+	if e := reqCtx.begin(); e != nil {
+		return s.newErrorResponse(StatusInternalServerError, e)
+	}
+	defer reqCtx.commit()
+
+	//TODO add session
+	ctx := &context{tx: reqCtx.tx, req: reqCtx.req, resp: resp, vars: json.Object{}, sess: reqCtx.sess}
+
+	for _, action := range r.action {
+		result, e := action.execute(ctx)
+
+		if e != nil {
+			reqCtx.rollback()
+			return s.newErrorResponse(StatusInternalServerError, e)
+		}
+		if prop := action.property(); prop != `` {
+			ctx.put(prop, result)
+		}
+	}
+
+	return resp, nil
 }
 
 //NewRoute create route
