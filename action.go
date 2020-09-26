@@ -13,6 +13,3 @@ type Action interface {
 	property() string
 	params() []string
 }
-
-//ActionFunc ...
-type ActionFunc func(ctx Context) (interface{}, error)
