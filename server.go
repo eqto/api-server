@@ -140,7 +140,7 @@ func (s *Server) NormalizeFunc(n bool) {
 func (s *Server) Execute(method, url string, header, body []byte) (Response, error) {
 	req, e := parseRequest(method, url, header, body)
 	if e != nil {
-		return s.newErrorResponse(StatusBadRequest, e)
+		return newErrorResponse(StatusBadRequest, e)
 	}
 
 	route, e := s.GetRoute(string(method), req.URL().Path)
@@ -157,7 +157,7 @@ func (s *Server) Execute(method, url string, header, body []byte) (Response, err
 		}
 	}
 	//route not found
-	return s.newErrorResponse(StatusNotFound, e)
+	return newErrorResponse(StatusNotFound, e)
 }
 
 func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
@@ -176,7 +176,7 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 		sess := &session{}
 		req, e := parseRequest(method, url, header, body)
 		if e != nil {
-			return s.newErrorResponse(StatusBadRequest, e)
+			return newErrorResponse(StatusBadRequest, e)
 		}
 		reqCtx := newRequestCtx(s.cn, req, sess)
 		return route.execute(s, reqCtx)
@@ -186,7 +186,7 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 			return proxy.execute(s, ctx)
 		}
 	}
-	return s.newErrorResponse(StatusNotFound, e)
+	return newErrorResponse(StatusNotFound, e)
 }
 
 //Serve ...
@@ -252,13 +252,6 @@ func (s *Server) normalizePath(path string) string {
 		path = `/` + path
 	}
 	return path
-}
-
-func (s *Server) newErrorResponse(status uint16, err error) (*response, error) {
-	resp := newResponse(status)
-	resp.err = err
-	resp.errFrame = log.Stacktrace(2)
-	return resp, err
 }
 
 func (s *Server) debug(v ...interface{}) {

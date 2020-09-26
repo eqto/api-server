@@ -54,7 +54,7 @@ func (p *proxy) execute(s *Server, ctx *fasthttp.RequestCtx) (Response, error) {
 		return nil, e
 	}
 	resp := newResponse(StatusOK)
-	resp.status = uint16(httpResp.StatusCode())
+	resp.status = httpResp.StatusCode()
 	header := resp.Header()
 	httpResp.Header.VisitAll(func(key, value []byte) {
 		header.Set(string(key), string(value))

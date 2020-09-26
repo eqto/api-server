@@ -19,7 +19,7 @@ type response struct {
 	header  Header
 	rawBody []byte //if not json put here
 
-	status   uint16
+	status   int
 	err      error
 	errFrame []log.Frame
 }
@@ -54,11 +54,15 @@ func (r *response) Body() []byte {
 	js.Put(`status`, 0).Put(`message`, `success`)
 	if r.status != 200 {
 		js.Put(`status`, r.status)
-		js.Put(`message`, r.err.Error())
+		if r.err != nil {
+			js.Put(`message`, r.err.Error())
+		} else {
+			js.Put(`message`, `Unknown error`)
+		}
 	}
 	return js.ToBytes()
 }
 
-func newResponse(status uint16) *response {
+func newResponse(status int) *response {
 	return &response{status: status, header: Header{}, Object: json.Object{}}
 }

@@ -48,20 +48,20 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 	if s.middleware != nil {
 		for _, m := range s.middleware {
 			if e := reqCtx.begin(); e != nil {
-				return s.newErrorResponse(StatusInternalServerError, e)
+				return newErrorResponse(StatusInternalServerError, e)
 			}
 			defer reqCtx.rollback()
 			if m.isAuth {
 				if r.secure {
 					if e := m.f(reqCtx); e != nil {
 						reqCtx.rollback()
-						return s.newErrorResponse(StatusUnauthorized, e)
+						return newErrorResponse(StatusUnauthorized, e)
 					}
 				}
 			} else {
 				if e := m.f(reqCtx); e != nil {
 					reqCtx.rollback()
-					return s.newErrorResponse(StatusInternalServerError, e)
+					return newErrorResponse(StatusInternalServerError, e)
 				}
 			}
 			reqCtx.commit()
@@ -71,7 +71,7 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 	resp := newResponse(StatusOK)
 
 	if e := reqCtx.begin(); e != nil {
-		return s.newErrorResponse(StatusInternalServerError, e)
+		return newErrorResponse(StatusInternalServerError, e)
 	}
 	defer reqCtx.commit()
 
@@ -83,7 +83,7 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 
 		if e != nil {
 			reqCtx.rollback()
-			return s.newErrorResponse(StatusInternalServerError, e)
+			return newErrorResponse(StatusInternalServerError, e)
 		}
 		if prop := action.property(); prop != `` {
 			ctx.put(prop, result)
