@@ -25,7 +25,7 @@ func (p *proxy) match(path string) bool {
 func (p *proxy) execute(s *Server, ctx *fasthttp.RequestCtx) (Response, error) {
 	u, e := url.Parse(string(ctx.RequestURI()))
 	if e != nil {
-		return nil, e
+		return newResponseError(StatusInternalServerError, e)
 	}
 
 	dest := p.dest
@@ -51,7 +51,7 @@ func (p *proxy) execute(s *Server, ctx *fasthttp.RequestCtx) (Response, error) {
 	client := &fasthttp.Client{}
 
 	if e := client.DoTimeout(httpReq, httpResp, 120*time.Second); e != nil {
-		return nil, e
+		return newResponseError(StatusBadGateway, e)
 	}
 	resp := newResponse(StatusOK)
 	resp.status = httpResp.StatusCode()

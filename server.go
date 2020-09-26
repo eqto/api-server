@@ -140,7 +140,7 @@ func (s *Server) NormalizeFunc(n bool) {
 func (s *Server) Execute(method, url string, header, body []byte) (Response, error) {
 	req, e := parseRequest(method, url, header, body)
 	if e != nil {
-		return newErrorResponse(StatusBadRequest, e)
+		return newResponseError(StatusBadRequest, e)
 	}
 
 	route, e := s.GetRoute(string(method), req.URL().Path)
@@ -157,7 +157,7 @@ func (s *Server) Execute(method, url string, header, body []byte) (Response, err
 		}
 	}
 	//route not found
-	return newErrorResponse(StatusNotFound, e)
+	return newResponseError(StatusNotFound, e)
 }
 
 func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
@@ -176,7 +176,7 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 		sess := &session{}
 		req, e := parseRequest(method, url, header, body)
 		if e != nil {
-			return newErrorResponse(StatusBadRequest, e)
+			return newResponseError(StatusBadRequest, e)
 		}
 		reqCtx := newRequestCtx(s.cn, req, sess)
 		return route.execute(s, reqCtx)
@@ -186,7 +186,7 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 			return proxy.execute(s, ctx)
 		}
 	}
-	return newErrorResponse(StatusNotFound, e)
+	return newResponseError(StatusNotFound, e)
 }
 
 //Serve ...
@@ -196,15 +196,20 @@ func (s *Server) Serve(port int) error {
 		if e != nil {
 			s.logW(e)
 		}
-		ctx.SetStatusCode(resp.Status())
-		for key, valArr := range resp.Header() {
-			if len(valArr) > 0 {
-				ctx.Response.Header.Set(key, valArr[0])
-			} else {
-				ctx.Response.Header.Set(key, ``)
-			}
+		if resp == nil {
+			resp, _ = newResponseError(StatusInternalServerError, nil)
 		}
-		ctx.SetBody(resp.Body())
+		if resp != nil {
+			ctx.SetStatusCode(resp.Status())
+			for key, valArr := range resp.Header() {
+				if len(valArr) > 0 {
+					ctx.Response.Header.Set(key, valArr[0])
+				} else {
+					ctx.Response.Header.Set(key, ``)
+				}
+			}
+			ctx.SetBody(resp.Body())
+		}
 	})
 }
 

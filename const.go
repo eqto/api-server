@@ -17,4 +17,7 @@ const (
 
 	//StatusInternalServerError ...
 	StatusInternalServerError = 500
+
+	//StatusBadGateway ...
+	StatusBadGateway = 502
 )
