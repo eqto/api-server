@@ -83,6 +83,11 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 
 		if e != nil {
 			reqCtx.rollback()
+			if result != nil {
+				if resp, ok := result.(Response); ok {
+					return resp, e
+				}
+			}
 			return newErrorResponse(StatusInternalServerError, e)
 		}
 		if prop := action.property(); prop != `` {
