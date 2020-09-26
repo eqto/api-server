@@ -24,7 +24,7 @@ var (
 	errExecutingQuery   = errors.New(`error executing query: %s`)
 )
 
-type queryAction struct {
+type actionQuery struct {
 	Action
 
 	rawQuery  string
@@ -38,16 +38,16 @@ type queryAction struct {
 }
 
 //Property ...
-func (q *queryAction) property() string {
+func (q *actionQuery) property() string {
 	return q.qProperty
 }
 
 //Params ..
-func (q *queryAction) params() []string {
+func (q *actionQuery) params() []string {
 	return q.qParams
 }
 
-func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface{}, error) {
+func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface{}, error) {
 	var data interface{}
 	var err error
 
@@ -129,7 +129,7 @@ func (q *queryAction) executeItem(ctx *context, values []interface{}) (interface
 	return data, nil
 }
 
-func (q *queryAction) populateValues(ctx *context, item json.Object) ([]interface{}, error) {
+func (q *actionQuery) populateValues(ctx *context, item json.Object) ([]interface{}, error) {
 	values := []interface{}{}
 	for _, param := range q.qParams {
 		if strings.HasPrefix(param, `$session.`) {
@@ -149,7 +149,7 @@ func (q *queryAction) populateValues(ctx *context, item json.Object) ([]interfac
 	return values, nil
 }
 
-func (q *queryAction) execute(ctx *context) (interface{}, error) {
+func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 	if q.arrayName != `` { //execute array
 		array := ctx.req.jsonBody.GetArray(q.arrayName)
 
@@ -174,8 +174,8 @@ func (q *queryAction) execute(ctx *context) (interface{}, error) {
 	return q.executeItem(ctx, values)
 }
 
-func newQueryAction(query, property, params string) (*queryAction, error) {
-	act := &queryAction{rawQuery: query, qProperty: property}
+func newQueryAction(query, property, params string) (*actionQuery, error) {
+	act := &actionQuery{rawQuery: query, qProperty: property}
 
 	str := strings.SplitN(query, ` `, 2)
 	queryType := strings.ToUpper(str[0])
