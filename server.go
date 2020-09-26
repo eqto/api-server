@@ -3,14 +3,14 @@ package api
 import (
 	"errors"
 	"fmt"
-	"log"
+	uri "net/url"
 	"reflect"
 	"regexp"
 	"runtime"
 	"strings"
 
 	"github.com/eqto/go-db"
-	"github.com/eqto/go-json"
+	log "github.com/eqto/go-logger"
 	"github.com/valyala/fasthttp"
 )
 
@@ -36,6 +36,7 @@ const (
 //Server ...
 type Server struct {
 	routeMap map[string]map[string]*Route
+	proxies  []proxy
 
 	defaultContentType string
 	normalize          bool
@@ -85,6 +86,16 @@ func (s *Server) AddMiddleware(m Middleware) {
 //AddAuthMiddleware ..
 func (s *Server) AddAuthMiddleware(m Middleware) {
 	s.middleware = append(s.middleware, middleware{f: m, isAuth: true})
+}
+
+//Proxy ...
+func (s *Server) Proxy(path, dest string) error {
+	p, e := newProxy(path, dest)
+	if e != nil {
+		return e
+	}
+	s.proxies = append(s.proxies, p)
+	return nil
 }
 
 //SetRoute ...
@@ -144,7 +155,8 @@ func (s *Server) NormalizeFunc(n bool) {
 }
 
 //Execute request and Response header and body
-func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
+//!deprecated
+func (s *Server) Execute(method, url string, header, body []byte) (Response, error) {
 	req, e := parseRequest(method, url, header, body)
 	if e != nil {
 		return s.newErrorResponse(StatusBadRequest, e)
@@ -156,14 +168,50 @@ func (s *Server) Execute(method, url, header, body []byte) (Response, error) {
 		reqCtx := newRequestCtx(s.cn, req, sess)
 		return route.execute(s, reqCtx)
 	}
+	for _, proxy := range s.proxies {
+		s.logD(string(url))
+		// s.logD(proxy)
+		if proxy.match(string(url)) {
+			// return proxy.execute(method, url, header, body)
+		}
+	}
 	//route not found
+	return s.newErrorResponse(StatusNotFound, e)
+}
+
+func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
+	method := string(ctx.Method())
+	url := string(ctx.RequestURI())
+	s.logD(`Request url:`, url)
+
+	u, e := uri.Parse(url)
+	if e != nil {
+		return nil, e
+	}
+	route, e := s.GetRoute(method, u.Path)
+	if e == nil {
+		header := ctx.Request.Header.RawHeaders()
+		body := ctx.Request.Body()
+		sess := &session{}
+		req, e := parseRequest(method, url, header, body)
+		if e != nil {
+			return s.newErrorResponse(StatusBadRequest, e)
+		}
+		reqCtx := newRequestCtx(s.cn, req, sess)
+		return route.execute(s, reqCtx)
+	}
+	for _, proxy := range s.proxies {
+		if proxy.match(string(url)) {
+			return proxy.execute(s, ctx)
+		}
+	}
 	return s.newErrorResponse(StatusNotFound, e)
 }
 
 //Serve ...
 func (s *Server) Serve(port int) error {
 	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(ctx *fasthttp.RequestCtx) {
-		resp, e := s.Execute(ctx.Method(), ctx.RequestURI(), ctx.Request.Header.RawHeaders(), ctx.Request.Body())
+		resp, e := s.execute(ctx)
 		if e != nil {
 			s.logW(e)
 		}
@@ -226,13 +274,10 @@ func (s *Server) normalizePath(path string) string {
 }
 
 func (s *Server) newErrorResponse(status uint16, err error) (*response, error) {
-	resp := s.newResponse(status)
-	resp.setError(err)
+	resp := newResponse(status)
+	resp.err = err
+	resp.errFrame = log.Stacktrace(2)
 	return resp, err
-}
-
-func (s *Server) newResponse(status uint16) *response {
-	return &response{server: s, status: status, header: Header{}, Object: json.Object{}}
 }
 
 func (s *Server) debug(v ...interface{}) {

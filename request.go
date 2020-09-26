@@ -18,7 +18,7 @@ type Request interface {
 }
 
 type request struct {
-	method   []byte
+	method   string
 	header   Header
 	body     []byte
 	url      uri.URL
@@ -52,7 +52,7 @@ func (r *request) get(key string) interface{} {
 	return r.url.Query().Get(key)
 }
 
-func parseRequest(method, url, header, body []byte) (*request, error) {
+func parseRequest(method, url string, header, body []byte) (*request, error) {
 	u, e := uri.Parse(string(url))
 	if e != nil {
 		return nil, e

@@ -68,7 +68,7 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 		}
 	}
 
-	resp := s.newResponse(StatusOK)
+	resp := newResponse(StatusOK)
 
 	if e := reqCtx.begin(); e != nil {
 		return s.newErrorResponse(StatusInternalServerError, e)

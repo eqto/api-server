@@ -16,8 +16,8 @@ type response struct {
 	json.Object
 	Response
 
-	header Header
-	server *Server
+	header  Header
+	rawBody []byte //if not json put here
 
 	status   uint16
 	err      error
@@ -38,8 +38,11 @@ func (r *response) Success() bool {
 }
 
 func (r *response) Body() []byte {
+	if r.rawBody != nil {
+		return r.rawBody
+	}
 	js := r.Object.Clone()
-	if !r.server.isProduction && r.errFrame != nil {
+	if r.errFrame != nil {
 		trace := []string{}
 		for _, frame := range r.errFrame {
 			trace = append(trace, frame.String())
@@ -53,9 +56,7 @@ func (r *response) Body() []byte {
 	}
 	return js.ToBytes()
 }
-func (r *response) setError(err error) {
-	r.err = err
-	if !r.server.isProduction {
-		r.errFrame = log.Stacktrace(2)
-	}
+
+func newResponse(status uint16) *response {
+	return &response{status: status, header: Header{}, Object: json.Object{}}
 }
