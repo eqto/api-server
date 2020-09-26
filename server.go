@@ -14,25 +14,6 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-const (
-	//MethodGet GET
-	MethodGet string = `GET`
-	//MethodPost POST
-	MethodPost string = `POST`
-
-	//StatusBadRequest ...
-	StatusBadRequest = 400
-	//StatusUnauthorized ...
-	StatusUnauthorized = 401
-	//StatusNotFound ...
-	StatusNotFound = 404
-	//StatusOK ...
-	StatusOK = 200
-
-	//StatusInternalServerError ...
-	StatusInternalServerError = 500
-)
-
 //Server ...
 type Server struct {
 	routeMap map[string]map[string]*Route
