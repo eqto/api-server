@@ -36,7 +36,6 @@ const (
 //Server ...
 type Server struct {
 	routeMap map[string]map[string]*Route
-	proxies  []proxy
 
 	defaultContentType string
 	normalize          bool
