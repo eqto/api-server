@@ -29,7 +29,9 @@ func (r *response) Status() int {
 }
 
 func (r *response) Header() Header {
-	r.header.Set(`Content-Type`, `application/json`)
+	if r.rawBody == nil {
+		r.header.Set(`Content-Type`, `application/json`)
+	}
 	return r.header.Clone()
 }
 
