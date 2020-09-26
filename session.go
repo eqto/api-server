@@ -6,6 +6,7 @@ import "github.com/eqto/go-json"
 type Session interface {
 	Put(key string, value interface{})
 	Get(key string) interface{}
+	GetInt(key string) int
 	GetString(key string) string
 }
 
@@ -33,4 +34,9 @@ func (s *session) Get(key string) interface{} {
 func (s *session) GetString(key string) string {
 	s.init()
 	return s.val.GetString(key)
+}
+
+func (s *session) GetInt(key string) int {
+	s.init()
+	return s.val.GetInt(key)
 }
