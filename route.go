@@ -100,7 +100,7 @@ func NewRoute() *Route {
 }
 
 //NewFuncRoute create POST route with single func action
-func NewFuncRoute(path string, f func(ctx Context) (interface{}, error)) *Route {
+func NewFuncRoute(f func(ctx Context) (interface{}, error)) *Route {
 	route := NewRoute()
 	route.AddFuncAction(f, `data`)
 	return route
