@@ -1,8 +1,6 @@
 package api
 
 import (
-	"strings"
-
 	"github.com/eqto/go-json"
 )
 
@@ -13,8 +11,6 @@ const (
 
 //Route ...
 type Route struct {
-	path   string
-	method string
 	action []Action
 	secure bool
 }
@@ -99,14 +95,13 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 }
 
 //NewRoute create route
-func NewRoute(method, path string) *Route {
-	method = strings.ToUpper(method)
-	return &Route{path: path, method: method, secure: true}
+func NewRoute() *Route {
+	return &Route{secure: true}
 }
 
 //NewFuncRoute create POST route with single func action
 func NewFuncRoute(path string, f func(ctx Context) (interface{}, error)) *Route {
-	route := NewRoute(MethodPost, path)
+	route := NewRoute()
 	route.AddFuncAction(f, `data`)
 	return route
 }

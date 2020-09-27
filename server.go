@@ -80,19 +80,17 @@ func (s *Server) Proxy(path, dest string) error {
 }
 
 //SetRoute ...
-func (s *Server) SetRoute(route *Route) {
+func (s *Server) SetRoute(method, path string, route *Route) {
 	if s.routeMap == nil {
 		s.routeMap = make(map[string]map[string]*Route)
 		s.routeMap[MethodGet] = make(map[string]*Route)
 		s.routeMap[MethodPost] = make(map[string]*Route)
 	}
-	path := route.path
 	if s.normalize {
 		path = s.normalizePath(path)
-		route.path = path
 	}
-	s.routeMap[route.method][path] = route
-	s.debug(fmt.Sprintf(`add route %s %s`, route.method, route.path))
+	s.routeMap[method][path] = route
+	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
 }
 
 //AddFuncRoute add route with single func action. When secure is true, this route will validated using auth middlewares if any.
@@ -103,21 +101,21 @@ func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure b
 		return nil, errors.New(`unsupported add inline function`)
 	}
 	name = name[strings.IndexRune(name, '.')+1:]
-	route := NewRoute(MethodPost, `/`+name)
+	route := NewRoute()
 	if _, e := route.AddFuncAction(f, `data`); e != nil {
 		return nil, e
 	}
-	s.SetRoute(route)
+	s.SetRoute(MethodPost, `/`+name, route)
 	return route, nil
 }
 
 //AddQueryRoute add route with single query action. When secure is true, this route will validated using auth middlewares if any.
 func (s *Server) AddQueryRoute(path, query, params string, secure bool) (*Route, error) {
-	route := NewRoute(MethodPost, path)
+	route := NewRoute()
 	if _, e := route.AddQueryAction(query, params, `data`); e != nil {
 		return nil, e
 	}
-	s.SetRoute(route)
+	s.SetRoute(MethodPost, path, route)
 	return route, nil
 }
 
