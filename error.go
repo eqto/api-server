@@ -1,9 +1,16 @@
 package api
 
-import log "github.com/eqto/go-logger"
+import (
+	"errors"
+
+	log "github.com/eqto/go-logger"
+)
 
 //ResponseError used for generate response from error
 func ResponseError(status int, err error) (Response, error) {
+	if err == nil {
+		err = errors.New(`Unknown error`)
+	}
 	return newResponseError(status, err)
 }
 

@@ -176,8 +176,7 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 		if e != nil {
 			return newResponseError(StatusBadRequest, e)
 		}
-		reqCtx := newRequestCtx(s.cn, req, sess)
-		return route.execute(s, reqCtx)
+		return route.execute(s, newRequestCtx(s.cn, req, sess))
 	}
 	for _, proxy := range s.proxies {
 		if proxy.match(string(url)) {
@@ -197,17 +196,15 @@ func (s *Server) Serve(port int) error {
 		if resp == nil {
 			resp, _ = newResponseError(StatusInternalServerError, nil)
 		}
-		if resp != nil {
-			ctx.SetStatusCode(resp.Status())
-			for key, valArr := range resp.Header() {
-				if len(valArr) > 0 {
-					ctx.Response.Header.Set(key, valArr[0])
-				} else {
-					ctx.Response.Header.Set(key, ``)
-				}
+		ctx.SetStatusCode(resp.Status())
+		for key, valArr := range resp.Header() {
+			if len(valArr) > 0 {
+				ctx.Response.Header.Set(key, valArr[0])
+			} else {
+				ctx.Response.Header.Set(key, ``)
 			}
-			ctx.SetBody(resp.Body())
 		}
+		ctx.SetBody(resp.Body())
 	})
 }
 

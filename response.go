@@ -10,6 +10,7 @@ type Response interface {
 	Header() Header
 	Status() int
 	Body() []byte
+	Error() error
 }
 
 type response struct {
@@ -25,7 +26,7 @@ type response struct {
 }
 
 func (r *response) Status() int {
-	return int(r.status)
+	return r.status
 }
 
 func (r *response) Header() Header {
@@ -37,6 +38,10 @@ func (r *response) Header() Header {
 
 func (r *response) Success() bool {
 	return r.status == StatusOK
+}
+
+func (r *response) Error() error {
+	return r.err
 }
 
 func (r *response) Body() []byte {

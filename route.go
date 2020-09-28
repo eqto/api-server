@@ -76,7 +76,17 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 
 	for _, action := range r.action {
 		result, e := action.execute(ctx)
-
+		if result != nil {
+			if resp, ok := result.(Response); ok {
+				if resp.Status() != StatusOK && e == nil {
+					url := ctx.req.url.RawPath
+					if ctx.req.url.RawQuery != `` {
+						url += `?` + ctx.req.url.RawQuery
+					}
+					e = resp.Error()
+				}
+			}
+		}
 		if e != nil {
 			reqCtx.rollback()
 			if result != nil {
