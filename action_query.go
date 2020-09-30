@@ -32,9 +32,8 @@ type actionQuery struct {
 	qProperty string
 	qParams   []string
 
-	enableFilter bool
-	arrayName    string
-	builder      *db.QueryBuilder
+	arrayName string
+	builder   *db.QueryBuilder
 }
 
 //Property ...
@@ -54,46 +53,48 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 	var builder *db.QueryBuilder
 	if (q.qType == queryTypeSelect || q.qType == queryTypeGet) && q.builder != nil {
 		builder = q.builder.Clone()
-		//process filter if exist
-		if q.enableFilter {
-			filters := ctx.req.jsonBody.GetArray(`filter`)
-			if filters != nil && len(filters) > 0 {
-				for _, filter := range filters {
-					key := filter.GetString(`key`)
-					val := filter.GetString(`value`)
-					typ := strings.ToUpper(strings.TrimSpace(filter.GetString(`type`)))
-					switch typ {
-					case `date`:
-						builder.WhereOp(key, `>=`)
-						values = append(values, val)
+		//example filter for books title contains word = 'Programming'
+		// {
+		//   "title": {
+		//     "value": "Programming",
+		//     "filter": "fulltext"
+		//   }
+		// }
+		filters := ctx.req.jsonBody.GetJSONObject(`filters`)
+		if filters != nil && len(filters) > 0 {
+			for key := range filters {
+				js := filters.GetJSONObject(key)
+				value := js.GetString(`value`)
+				filter := strings.ToUpper(js.GetString(`filter`))
+				switch filter {
+				case `LIKE`:
+					fallthrough
+				case `FULLTEXT`:
+					fallthrough
+				case `>`:
+					fallthrough
+				case `>=`:
+					fallthrough
+				case `<`:
+					fallthrough
+				case `<=`:
+					builder.WhereOp(key, filter)
+					values = append(values, value)
+				case `date`:
+					builder.WhereOp(key, `>=`)
+					values = append(values, value)
 
-						time, _ := time.Parse(`2006-01-02`, val)
-						time = time.AddDate(0, 0, 1)
-						builder.WhereOp(key, `<`)
-						values = append(values, time.Format(`2006-01-02`))
-					case `LIKE`:
-						fallthrough
-					case `FULLTEXT`:
-						fallthrough
-					case `>`:
-						fallthrough
-					case `>=`:
-						fallthrough
-					case `<`:
-						fallthrough
-					case `<=`:
-						builder.WhereOp(key, typ)
-						values = append(values, val)
-					case `=`:
-						fallthrough
-					default:
-						builder.Where(key)
-						values = append(values, val)
-					}
+					time, _ := time.Parse(`2006-01-02`, value)
+					time = time.AddDate(0, 0, 1)
+					builder.WhereOp(key, `<`)
+					values = append(values, time.Format(`2006-01-02`))
+				default:
+					builder.Where(key)
+					values = append(values, value)
 				}
+
 			}
 		}
-
 	}
 
 	switch q.qType {
@@ -102,6 +103,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 			if builder.LimitLength() == 0 {
 				builder.Limit(builder.LimitStart(), 100)
 			}
+			println(builder.ToSQL())
 			data, err = ctx.tx.Select(builder.ToSQL(), values...)
 			if data == nil {
 				data = []db.Resultset{}
