@@ -99,23 +99,27 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 
 	switch q.qType {
 	case queryTypeSelect:
-		if builder != nil { //run sql function
+		sql := q.rawQuery
+		if builder != nil {
 			if builder.LimitLength() == 0 {
 				builder.Limit(builder.LimitStart(), 100)
 			}
-			data, err = ctx.tx.Select(builder.ToSQL(), values...)
-			if data == nil {
-				data = []db.Resultset{}
-			}
+			sql = builder.ToSQL()
+		}
+		data, err = ctx.tx.Select(sql, values...)
+		if data == nil {
+			data = []db.Resultset{}
 		}
 	case queryTypeGet:
-		if q.builder != nil { //run sql function
-			res, e := ctx.tx.Get(builder.ToSQL(), values...)
-			if e != nil {
-				err = e
-			} else if res != nil {
-				data = res
-			}
+		sql := q.rawQuery
+		if builder != nil {
+			sql = builder.ToSQL()
+		}
+		res, e := ctx.tx.Get(sql, values...)
+		if e != nil {
+			err = e
+		} else if res != nil {
+			data = res
 		}
 	case queryTypeUpdate:
 		data, err = ctx.tx.Exec(q.rawQuery, values...)
@@ -207,9 +211,6 @@ func newQueryAction(query, property, params string) (*actionQuery, error) {
 					return nil, errors.New(`multiple array in single query is prohibited`)
 				}
 				act.arrayName = matches[1]
-				// q.params = append(q.params, QueryParam{name: matches[1], indexName: matches[2]})
-			} else {
-				// q.params = append(q.params, QueryParam{name: val})
 			}
 		}
 	}
