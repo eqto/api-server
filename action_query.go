@@ -119,7 +119,13 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		if e != nil {
 			err = e
 		} else if res != nil {
-			data = res
+			if len(res) > 1 {
+				data = res
+			} else {
+				for key := range res {
+					data = res[key]
+				}
+			}
 		}
 	case queryTypeUpdate:
 		data, err = ctx.tx.Exec(q.rawQuery, values...)
