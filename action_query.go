@@ -103,7 +103,6 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 			if builder.LimitLength() == 0 {
 				builder.Limit(builder.LimitStart(), 100)
 			}
-			println(builder.ToSQL())
 			data, err = ctx.tx.Select(builder.ToSQL(), values...)
 			if data == nil {
 				data = []db.Resultset{}
