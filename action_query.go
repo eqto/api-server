@@ -60,8 +60,8 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		//     "filter": "fulltext"
 		//   }
 		// }
-		filters := ctx.req.jsonBody.GetJSONObject(`filters`)
-		if filters != nil && len(filters) > 0 {
+
+		if filters := ctx.req.jsonBody.GetJSONObject(`filters`); filters != nil && len(filters) > 0 {
 			for key := range filters {
 				js := filters.GetJSONObject(key)
 				value := js.GetString(`value`)
@@ -94,6 +94,16 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 				}
 
 			}
+		}
+		// Example:
+		// {
+		//   "sort": {
+		// 	   "active": "created_at",
+		// 	   "direction": "asc"
+		//   }
+		// }
+		if sort := ctx.req.jsonBody.GetJSONObject(`sort`); sort != nil {
+			builder.Order(sort.GetString(`active`), sort.GetStringOr(`direction`, `asc`))
 		}
 	}
 
