@@ -104,7 +104,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		// }
 		if sort := ctx.req.jsonBody.GetJSONObject(`sort`); sort != nil {
 			if active := sort.GetString(`active`); active != `` {
-				builder.Order(sort.GetString(`active`), sort.GetStringOr(`direction`, `asc`))
+				builder.Order(active, sort.GetStringOr(`direction`, `asc`))
 			}
 		}
 	}
