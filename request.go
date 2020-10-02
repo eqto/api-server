@@ -26,7 +26,7 @@ type request struct {
 }
 
 func (r *request) Header() Header {
-	return r.header
+	return r.header.Clone()
 }
 
 func (r *request) URL() uri.URL {
