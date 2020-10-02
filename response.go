@@ -33,7 +33,7 @@ func (r *response) Header() Header {
 	if r.rawBody == nil {
 		r.header.Set(`Content-Type`, `application/json`)
 	}
-	return r.header.Clone()
+	return r.header
 }
 
 func (r *response) Success() bool {
