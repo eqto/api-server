@@ -116,10 +116,12 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		//   }
 		// }
 		if page := js.GetJSONObject(`page`); page != nil {
-			length := page.GetIntOr(`length`, 10)
-			location := page.GetIntOr(`location`, 1) - 1
-			location = location * length
-			builder.Limit(location, length)
+			length := page.GetInt(`length`)
+			location := page.GetInt(`location`)
+			if length > 0 && location > 0 {
+				location = (location - 1) * length
+				builder.Limit(location, length)
+			}
 		}
 	}
 
@@ -128,7 +130,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		sql := q.rawQuery
 		if builder != nil {
 			if builder.LimitLength() == 0 {
-				builder.Limit(builder.LimitStart(), 100)
+				builder.Limit(builder.LimitStart(), 1000)
 			}
 			sql = builder.ToSQL()
 		}
