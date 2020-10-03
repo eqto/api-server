@@ -60,8 +60,9 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		//     "filter": "fulltext"
 		//   }
 		// }
+		js := ctx.req.jsonBody
 
-		if filters := ctx.req.jsonBody.GetJSONObject(`filters`); filters != nil && len(filters) > 0 {
+		if filters := js.GetJSONObject(`filters`); filters != nil && len(filters) > 0 {
 			for key := range filters {
 				js := filters.GetJSONObject(key)
 				value := js.GetString(`value`)
@@ -102,10 +103,23 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		// 	   "direction": "asc"
 		//   }
 		// }
-		if sort := ctx.req.jsonBody.GetJSONObject(`sort`); sort != nil {
+		if sort := js.GetJSONObject(`sort`); sort != nil {
 			if active := sort.GetString(`active`); active != `` {
 				builder.Order(active, sort.GetStringOr(`direction`, `asc`))
 			}
+		}
+		// Example:
+		// {
+		//   "page": {
+		// 	   "location": 2,
+		// 	   "length": 100
+		//   }
+		// }
+		if page := js.GetJSONObject(`page`); page != nil {
+			length := page.GetIntOr(`length`, 10)
+			location := page.GetIntOr(`location`, 1) - 1
+			location = location * length
+			builder.Limit(location, length)
 		}
 	}
 
@@ -147,6 +161,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		data, err = ctx.tx.Exec(q.rawQuery, values...)
 	}
 	if err != nil {
+		ctx.server.logE(err)
 		return nil, fmt.Errorf(errExecutingQuery.Error(), q.rawQuery)
 	}
 	return data, nil

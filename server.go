@@ -149,7 +149,6 @@ func (s *Server) Execute(method, url string, header, body []byte) (Response, err
 	}
 	for _, proxy := range s.proxies {
 		s.logD(string(url))
-		// s.logD(proxy)
 		if proxy.match(string(url)) {
 			// return proxy.execute(method, url, header, body)
 		}

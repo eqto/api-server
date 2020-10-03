@@ -21,7 +21,8 @@ type context struct {
 	resp *response
 	sess *session
 
-	vars json.Object
+	server *Server
+	vars   json.Object
 }
 
 func (c *context) Request() Request {

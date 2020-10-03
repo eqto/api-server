@@ -72,7 +72,7 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 	defer reqCtx.commit()
 
 	//TODO add session
-	ctx := &context{tx: reqCtx.tx, req: reqCtx.req, resp: resp, vars: json.Object{}, sess: reqCtx.sess}
+	ctx := &context{server: s, tx: reqCtx.tx, req: reqCtx.req, resp: resp, vars: json.Object{}, sess: reqCtx.sess}
 
 	for _, action := range r.action {
 		result, e := action.execute(ctx)
