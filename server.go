@@ -18,6 +18,7 @@ import (
 type Server struct {
 	routeMap map[string]map[string]*Route
 	proxies  []proxy
+	files    []file
 
 	defaultContentType string
 	normalize          bool
@@ -76,6 +77,16 @@ func (s *Server) Proxy(path, dest string) error {
 		return e
 	}
 	s.proxies = append(s.proxies, p)
+	return nil
+}
+
+//File serve static file. Path parameter to determine url to be processed. Dest parameter will find directory of the file reside. RedirectTo parameter to redirect non existing file, this param can be used for SPA.
+func (s *Server) File(path, dest, redirectTo string) error {
+	f, e := newFile(path, dest, redirectTo)
+	if e != nil {
+		return e
+	}
+	s.files = append(s.files, f)
 	return nil
 }
 
@@ -182,6 +193,12 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 			return proxy.execute(s, ctx)
 		}
 	}
+	for _, file := range s.files {
+		if file.match(string(url)) {
+			file.handler(ctx)
+			return nil, nil
+		}
+	}
 	return newResponseError(StatusNotFound, e)
 }
 
@@ -192,18 +209,17 @@ func (s *Server) Serve(port int) error {
 		if e != nil {
 			s.logW(e)
 		}
-		if resp == nil {
-			resp, _ = newResponseError(StatusInternalServerError, nil)
-		}
-		ctx.SetStatusCode(resp.Status())
-		for key, valArr := range resp.Header() {
-			if len(valArr) > 0 {
-				ctx.Response.Header.Set(key, valArr[0])
-			} else {
-				ctx.Response.Header.Set(key, ``)
+		if resp != nil {
+			ctx.SetStatusCode(resp.Status())
+			for key, valArr := range resp.Header() {
+				if len(valArr) > 0 {
+					ctx.Response.Header.Set(key, valArr[0])
+				} else {
+					ctx.Response.Header.Set(key, ``)
+				}
 			}
+			ctx.SetBody(resp.Body())
 		}
-		ctx.SetBody(resp.Body())
 	})
 }
 
