@@ -236,7 +236,7 @@ func newQueryAction(query, property, params string) (*actionQuery, error) {
 
 	params = strings.ReplaceAll(strings.TrimSpace(params), ` `, ``)
 	if params != `` {
-		regex := regexp.MustCompile(`(?Uis)\s*^([a-z0-9._]+)\[([a-z0-9._]+)\]\s*$`)
+		regex := regexp.MustCompile(`(?Uis)\s*^([a-z0-9._]+)\[([a-z0-9._]*)\]\s*$`)
 
 		act.qParams = strings.Split(params, `,`)
 		for _, val := range act.qParams {
