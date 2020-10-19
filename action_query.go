@@ -169,15 +169,19 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 	return data, nil
 }
 
-func (q *actionQuery) populateValues(ctx *context, item json.Object) ([]interface{}, error) {
+func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interface{}, error) {
 	values := []interface{}{}
 	for _, param := range q.qParams {
 		if strings.HasPrefix(param, `$session.`) {
 			val := ctx.sess.GetString(param[9:])
 			values = append(values, val)
 		} else if strings.HasPrefix(param, q.arrayName+`[`) && strings.HasSuffix(param, `]`) {
-			val := item.Get(param[len(q.arrayName)+1 : len(param)-1])
-			values = append(values, val)
+			if js, ok := item.(json.Object); ok {
+				val := js.Get(param[len(q.arrayName)+1 : len(param)-1])
+				values = append(values, val)
+			} else {
+				values = append(values, item)
+			}
 		} else {
 			val := ctx.req.get(param)
 			if val == nil {
@@ -191,27 +195,41 @@ func (q *actionQuery) populateValues(ctx *context, item json.Object) ([]interfac
 
 func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 	if q.arrayName != `` { //execute array
-		array := ctx.req.jsonBody.GetArray(q.arrayName)
-
 		result := []interface{}{}
-		for _, obj := range array {
-			values, e := q.populateValues(ctx, obj)
-			if e != nil {
-				return nil, e
+
+		if objs := ctx.req.jsonBody.GetArray(q.arrayName); objs != nil {
+			for _, obj := range objs {
+				values, e := q.populateValues(ctx, obj)
+				if e != nil {
+					return nil, e
+				}
+				r, e := q.executeItem(ctx, values)
+				if e != nil {
+					return nil, e
+				}
+				result = append(result, r)
 			}
-			r, e := q.executeItem(ctx, values)
-			if e != nil {
-				return nil, e
+		} else if arr := ctx.req.jsonBody.Array(q.arrayName); arr != nil {
+			for _, val := range arr {
+				values, e := q.populateValues(ctx, val)
+				if e != nil {
+					return nil, e
+				}
+				r, e := q.executeItem(ctx, values)
+				if e != nil {
+					return nil, e
+				}
+				result = append(result, r)
 			}
-			result = append(result, r)
 		}
 		return result, nil
+	} else {
+		values, e := q.populateValues(ctx, nil)
+		if e != nil {
+			return nil, e
+		}
+		return q.executeItem(ctx, values)
 	}
-	values, e := q.populateValues(ctx, nil)
-	if e != nil {
-		return nil, e
-	}
-	return q.executeItem(ctx, values)
 }
 
 func newQueryAction(query, property, params string) (*actionQuery, error) {
