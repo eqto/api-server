@@ -205,7 +205,12 @@ func (s *Server) Serve(port int) error {
 					ctx.Response.Header.Set(key, ``)
 				}
 			}
-			ctx.SetBody(resp.Body())
+			if ctx.Request.Header.HasAcceptEncoding(`gzip`) {
+				fasthttp.WriteGzip(ctx.Response.BodyWriter(), resp.Body())
+				ctx.Response.Header.Add("Content-Encoding", "gzip")
+			} else {
+				ctx.SetBody(resp.Body())
+			}
 		}
 	})
 }
