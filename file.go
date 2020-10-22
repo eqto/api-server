@@ -12,6 +12,7 @@ import (
 type file struct {
 	regex   *regexp.Regexp
 	handler fasthttp.RequestHandler
+	path    string
 }
 
 func (f *file) match(path string) bool {
@@ -46,6 +47,7 @@ func newFile(path, dest, redirectTo string) (file, error) {
 	}
 
 	f := file{
+		path:    path,
 		regex:   regex,
 		handler: fasthttp.TimeoutHandler(fs.NewRequestHandler(), 60*time.Second, `Timeout`),
 	}
