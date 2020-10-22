@@ -80,8 +80,8 @@ func (s *Server) Proxy(path, dest string) error {
 	return nil
 }
 
-//File serve static file. Path parameter to determine url to be processed. Dest parameter will find directory of the file reside. RedirectTo parameter to redirect non existing file, this param can be used for SPA.
-func (s *Server) File(path, dest, redirectTo string) error {
+//FileRoute serve static file. Path parameter to determine url to be processed. Dest parameter will find directory of the file reside. RedirectTo parameter to redirect non existing file, this param can be used for SPA.
+func (s *Server) FileRoute(path, dest, redirectTo string) error {
 	f, e := newFile(path, dest, redirectTo)
 	if e != nil {
 		return e
