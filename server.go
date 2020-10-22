@@ -144,30 +144,6 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-//Execute request and Response header and body
-//!deprecated
-func (s *Server) Execute(method, url string, header, body []byte) (Response, error) {
-	req, e := parseRequest(method, url, header, body)
-	if e != nil {
-		return newResponseError(StatusBadRequest, e)
-	}
-
-	route, e := s.GetRoute(string(method), req.URL().Path)
-	if e == nil {
-		sess := &session{}
-		reqCtx := newRequestCtx(s.cn, req, sess)
-		return route.execute(s, reqCtx)
-	}
-	for _, proxy := range s.proxies {
-		s.logD(string(url))
-		if proxy.match(string(url)) {
-			// return proxy.execute(method, url, header, body)
-		}
-	}
-	//route not found
-	return newResponseError(StatusNotFound, e)
-}
-
 func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 	method := string(ctx.Method())
 	url := string(ctx.RequestURI())
