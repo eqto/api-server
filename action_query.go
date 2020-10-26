@@ -207,7 +207,13 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 				if e != nil {
 					return nil, e
 				}
-				result = append(result, r)
+				if recs, ok := r.([]db.Resultset); ok {
+					for _, rec := range recs {
+						result = append(result, rec)
+					}
+				} else {
+					result = append(result, r)
+				}
 			}
 		} else if arr := ctx.req.jsonBody.Array(q.arrayName); arr != nil {
 			for _, val := range arr {
@@ -219,7 +225,13 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 				if e != nil {
 					return nil, e
 				}
-				result = append(result, r)
+				if recs, ok := r.([]db.Resultset); ok {
+					for _, rec := range recs {
+						result = append(result, rec)
+					}
+				} else {
+					result = append(result, r)
+				}
 			}
 		}
 		return result, nil
