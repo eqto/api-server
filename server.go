@@ -177,7 +177,8 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 	}
 	for _, proxy := range s.proxies {
 		if proxy.match(string(url)) {
-			return proxy.execute(s, ctx)
+			proxy.execute(s, ctx)
+			return nil, nil
 		}
 	}
 	for _, file := range s.files {
