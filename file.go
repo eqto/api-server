@@ -47,9 +47,13 @@ func newFile(path, dest, redirectTo string) (file, error) {
 	}
 
 	f := file{
-		path:    path,
-		regex:   regex,
-		handler: fasthttp.TimeoutHandler(fs.NewRequestHandler(), 60*time.Second, `Timeout`),
+		path:  path,
+		regex: regex,
+		handler: fasthttp.CompressHandlerBrotliLevel(
+			fasthttp.TimeoutHandler(fs.NewRequestHandler(), 60*time.Second, `Timeout`),
+			fasthttp.CompressBrotliDefaultCompression,
+			fasthttp.CompressDefaultCompression,
+		),
 	}
 	if e != nil {
 		return f, e
