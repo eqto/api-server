@@ -175,11 +175,11 @@ func (s *Server) execute(ctx *context) (Response, error) {
 	if e == nil {
 		return route.execute(s, ctx)
 	}
-	// for _, proxy := range s.proxies {
-	// 	if proxy.match(string(url)) {
-	// 		return proxy.execute(s, ctx)
-	// 	}
-	// }
+	for _, proxy := range s.proxies {
+		if proxy.match(string(url)) {
+			return proxy.execute(s, ctx)
+		}
+	}
 	// for _, file := range s.files {
 	// 	if file.match(string(url)) {
 	// 		file.handler(ctx)
