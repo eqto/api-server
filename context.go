@@ -15,7 +15,10 @@ import (
 //Context ..
 type Context interface {
 	Session() Session
+	Request() Request
+	Response() Response
 }
+
 type context struct {
 	Context
 	s    *Server
@@ -28,11 +31,25 @@ type context struct {
 	cn     *db.Connection
 	tx     *db.Tx
 	lockCn sync.Mutex
+
+	next bool
 }
 
 //Session ..
 func (c *context) Session() Session {
 	return c.sess
+}
+
+func (c *context) Request() Request {
+	return c.req
+}
+
+func (c *context) Response() Response {
+	return c.resp
+}
+
+func (c *context) Next() {
+	c.next = true
 }
 
 func (c *context) begin() error {

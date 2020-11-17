@@ -28,8 +28,7 @@ type Server struct {
 	cn                 *db.Connection
 	dbConnected        bool
 	routeAuthenticator []RouteAuthenticator
-
-	middleware []Middleware
+	middleware         []Middleware
 
 	logD func(v ...interface{})
 	logW func(v ...interface{})
@@ -159,6 +158,13 @@ func (s *Server) NormalizeFunc(n bool) {
 func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	path := ctx.req.url.Path
 	s.logD(`Request path:`, path)
+
+	for _, m := range s.middleware {
+		if e := m(ctx); e != nil {
+			return e
+		}
+	}
+
 	route, e := s.GetRoute(ctx.req.Method(), path)
 	if e == nil {
 		e := route.execute(s, ctx)
