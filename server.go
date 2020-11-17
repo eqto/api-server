@@ -29,8 +29,7 @@ type Server struct {
 	dbConnected        bool
 	routeAuthenticator []RouteAuthenticator
 
-	middleware     []Middleware
-	respMiddleware []RespMiddleware
+	middleware []Middleware
 
 	logD func(v ...interface{})
 	logW func(v ...interface{})
@@ -70,11 +69,6 @@ func (s *Server) AddMiddleware(m Middleware) {
 //AddRouteAuthenticator ..
 func (s *Server) AddRouteAuthenticator(a RouteAuthenticator) {
 	s.routeAuthenticator = append(s.routeAuthenticator, a)
-}
-
-//AddResponseMiddleware ..
-func (s *Server) AddResponseMiddleware(m RespMiddleware) {
-	s.respMiddleware = append(s.respMiddleware, m)
 }
 
 //Proxy ...

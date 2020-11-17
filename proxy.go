@@ -31,22 +31,22 @@ func postprocessResponse(resp *fasthttp.Response) {
 }
 
 func (p *proxy) execute(s *Server, ctx *context) error {
-	if len(s.respMiddleware) == 0 {
-		prepareRequest(ctx.req.httpReq)
-		if e := p.client.DoTimeout(ctx.req.httpReq, ctx.resp.httpResp, 60*time.Second); e != nil {
-			return e
-		}
-		postprocessResponse(ctx.resp.httpResp)
-		return nil
-	}
-	httpResp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(httpResp)
-	if e := p.client.DoTimeout(ctx.req.httpReq, httpResp, 60*time.Second); e != nil {
-		ctx.resp.setError(StatusBadGateway, e)
+	prepareRequest(ctx.req.httpReq)
+	if e := p.client.DoTimeout(ctx.req.httpReq, ctx.resp.httpResp, 60*time.Second); e != nil {
 		return e
 	}
-	httpResp.CopyTo(ctx.resp.httpResp)
+	postprocessResponse(ctx.resp.httpResp)
 	return nil
+
+	//TODO used when responsemiddleware implemented
+	// httpResp := fasthttp.AcquireResponse()
+	// defer fasthttp.ReleaseResponse(httpResp)
+	// if e := p.client.DoTimeout(ctx.req.httpReq, httpResp, 60*time.Second); e != nil {
+	// 	ctx.resp.setError(StatusBadGateway, e)
+	// 	return e
+	// }
+	// httpResp.CopyTo(ctx.resp.httpResp)
+	// return nil
 }
 
 func newProxy(path, dest string) (proxy, error) {
