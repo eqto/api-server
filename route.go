@@ -41,8 +41,8 @@ func (r *Route) AddFuncAction(f func(ctx Context) (interface{}, error), property
 }
 
 func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
-	if s.authMiddleware != nil {
-		for _, m := range s.authMiddleware {
+	if s.routeAuthenticator != nil {
+		for _, m := range s.routeAuthenticator {
 			if e := reqCtx.begin(); e != nil {
 				return newResponseError(StatusInternalServerError, e)
 			}

@@ -25,11 +25,11 @@ type Server struct {
 
 	isProduction bool
 
-	cn          *db.Connection
-	dbConnected bool
+	cn                 *db.Connection
+	dbConnected        bool
+	routeAuthenticator []RouteAuthenticator
 
 	middleware     []Middleware
-	authMiddleware []Middleware
 	respMiddleware []RespMiddleware
 
 	logD func(v ...interface{})
@@ -67,9 +67,9 @@ func (s *Server) AddMiddleware(m Middleware) {
 	s.middleware = append(s.middleware, m)
 }
 
-//AddAuthMiddleware ..
-func (s *Server) AddAuthMiddleware(m Middleware) {
-	s.authMiddleware = append(s.authMiddleware, m)
+//AddRouteAuthenticator ..
+func (s *Server) AddRouteAuthenticator(a RouteAuthenticator) {
+	s.routeAuthenticator = append(s.routeAuthenticator, a)
 }
 
 //AddResponseMiddleware ..
