@@ -162,7 +162,7 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(ctx *context) (Response, error) {
+func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) (Response, error) {
 	method := string(ctx.req.Header.Method())
 	url := string(ctx.req.Header.RequestURI())
 	s.logD(`Request url:`, url)
@@ -180,31 +180,31 @@ func (s *Server) execute(ctx *context) (Response, error) {
 			return proxy.execute(s, ctx)
 		}
 	}
-	// for _, file := range s.files {
-	// 	if file.match(string(url)) {
-	// 		file.handler(ctx)
-	// 		return nil, nil
-	// 	}
-	// }
+	for _, file := range s.files {
+		if file.match(string(url)) {
+			file.handler(fastCtx)
+			return nil, nil
+		}
+	}
 	return newResponseError(StatusNotFound, e)
 }
 
 //Serve ...
 func (s *Server) Serve(port int) error {
-	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(reqCtx *fasthttp.RequestCtx) {
-		apiCtx, e := newCtx(s, &reqCtx.Request, &reqCtx.Response, s.cn)
+	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(fastCtx *fasthttp.RequestCtx) {
+		ctx, e := newCtx(s, &fastCtx.Request, &fastCtx.Response, s.cn)
 		if e != nil {
 			s.logW(e)
-			reqCtx.WriteString(e.Error())
+			fastCtx.WriteString(e.Error())
 			return
 		}
-		resp, e := s.execute(apiCtx)
+		resp, e := s.execute(fastCtx, ctx)
 		if e != nil {
 			s.logW(e)
 		}
 		if resp != nil {
 			if len(s.respMiddleware) > 0 {
-				if req, e := parseRequest(string(reqCtx.Method()), string(reqCtx.RequestURI()), reqCtx.Request.Header.RawHeaders(), reqCtx.Request.Body()); e == nil {
+				if req, e := parseRequest(string(fastCtx.Method()), string(fastCtx.RequestURI()), fastCtx.Request.Header.RawHeaders(), fastCtx.Request.Body()); e == nil {
 					for _, m := range s.respMiddleware {
 						m(req, resp)
 					}
@@ -213,26 +213,26 @@ func (s *Server) Serve(port int) error {
 				}
 			}
 
-			reqCtx.SetStatusCode(resp.Status())
+			fastCtx.SetStatusCode(resp.Status())
 			for key, valArr := range resp.Header() {
 				if len(valArr) > 0 {
-					reqCtx.Response.Header.Set(key, valArr[0])
+					fastCtx.Response.Header.Set(key, valArr[0])
 				} else {
-					reqCtx.Response.Header.Set(key, ``)
+					fastCtx.Response.Header.Set(key, ``)
 				}
 			}
-			hasEncoding := reqCtx.Request.Header.HasAcceptEncoding
+			hasEncoding := fastCtx.Request.Header.HasAcceptEncoding
 			if hasEncoding(`br`) {
-				fasthttp.WriteBrotli(reqCtx.Response.BodyWriter(), resp.Body())
-				reqCtx.Response.Header.Add(`Content-Encoding`, `br`)
+				fasthttp.WriteBrotli(fastCtx.Response.BodyWriter(), resp.Body())
+				fastCtx.Response.Header.Add(`Content-Encoding`, `br`)
 			} else if hasEncoding(`deflate`) {
-				fasthttp.WriteDeflate(reqCtx.Response.BodyWriter(), resp.Body())
-				reqCtx.Response.Header.Add(`Content-Encoding`, `deflate`)
+				fasthttp.WriteDeflate(fastCtx.Response.BodyWriter(), resp.Body())
+				fastCtx.Response.Header.Add(`Content-Encoding`, `deflate`)
 			} else if hasEncoding(`gzip`) {
-				fasthttp.WriteGzip(reqCtx.Response.BodyWriter(), resp.Body())
-				reqCtx.Response.Header.Add(`Content-Encoding`, `gzip`)
+				fasthttp.WriteGzip(fastCtx.Response.BodyWriter(), resp.Body())
+				fastCtx.Response.Header.Add(`Content-Encoding`, `gzip`)
 			} else {
-				reqCtx.SetBody(resp.Body())
+				fastCtx.SetBody(resp.Body())
 			}
 		}
 	})
