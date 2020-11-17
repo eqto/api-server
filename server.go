@@ -28,7 +28,8 @@ type Server struct {
 	cn          *db.Connection
 	dbConnected bool
 
-	middleware []middleware
+	middleware     []middleware
+	authMiddleware []middleware
 
 	logD func(v ...interface{})
 	logW func(v ...interface{})
@@ -62,12 +63,12 @@ func (s *Server) SetDatabase(host string, port int, username, password, name str
 
 //AddMiddleware ..
 func (s *Server) AddMiddleware(m Middleware) {
-	s.middleware = append(s.middleware, middleware{f: m, isAuth: false})
+	s.middleware = append(s.middleware, middleware{f: m})
 }
 
 //AddAuthMiddleware ..
 func (s *Server) AddAuthMiddleware(m Middleware) {
-	s.middleware = append(s.middleware, middleware{f: m, isAuth: true})
+	s.middleware = append(s.authMiddleware, middleware{f: m})
 }
 
 //Proxy ...

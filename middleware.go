@@ -4,6 +4,5 @@ package api
 type Middleware func(ctx RequestCtx) error
 
 type middleware struct {
-	f      Middleware
-	isAuth bool
+	f Middleware
 }

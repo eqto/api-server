@@ -41,24 +41,30 @@ func (r *Route) AddFuncAction(f func(ctx Context) (interface{}, error), property
 }
 
 func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
+	if s.authMiddleware != nil {
+		for _, m := range s.authMiddleware {
+			if e := reqCtx.begin(); e != nil {
+				return newResponseError(StatusInternalServerError, e)
+			}
+			defer reqCtx.rollback()
+			if r.secure {
+				if e := m.f(reqCtx); e != nil {
+					reqCtx.rollback()
+					return newResponseError(StatusUnauthorized, e)
+				}
+			}
+			reqCtx.commit()
+		}
+	}
 	if s.middleware != nil {
 		for _, m := range s.middleware {
 			if e := reqCtx.begin(); e != nil {
 				return newResponseError(StatusInternalServerError, e)
 			}
 			defer reqCtx.rollback()
-			if m.isAuth {
-				if r.secure {
-					if e := m.f(reqCtx); e != nil {
-						reqCtx.rollback()
-						return newResponseError(StatusUnauthorized, e)
-					}
-				}
-			} else {
-				if e := m.f(reqCtx); e != nil {
-					reqCtx.rollback()
-					return newResponseError(StatusInternalServerError, e)
-				}
+			if e := m.f(reqCtx); e != nil {
+				reqCtx.rollback()
+				return newResponseError(StatusInternalServerError, e)
 			}
 			reqCtx.commit()
 		}
