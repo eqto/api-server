@@ -3,6 +3,7 @@ package api
 import (
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/valyala/fasthttp"
 )
@@ -29,14 +30,31 @@ func postprocessResponse(resp *fasthttp.Response) {
 	resp.Header.Del("Connection")
 }
 
-func (p *proxy) execute(s *Server, ctx *fasthttp.RequestCtx) {
+func (p *proxy) execute(s *Server, ctx *fasthttp.RequestCtx) (Response, error) {
 	httpReq := &ctx.Request
-	httpResp := &ctx.Response
-	prepareRequest(httpReq)
-	if e := p.client.Do(httpReq, httpResp); e != nil {
-		return
+	if s.respMiddleware == nil || len(s.respMiddleware) == 0 {
+		httpResp := &ctx.Response
+		prepareRequest(httpReq)
+		if e := p.client.DoTimeout(httpReq, httpResp, 60*time.Second); e != nil {
+			return nil, nil
+		}
+		postprocessResponse(httpResp)
+		return nil, nil
 	}
-	postprocessResponse(httpResp)
+	httpResp := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseResponse(httpResp)
+	if e := p.client.DoTimeout(httpReq, httpResp, 60*time.Second); e != nil {
+		return newResponseError(StatusBadGateway, e)
+	}
+	resp := newResponse(StatusOK)
+	resp.status = httpResp.StatusCode()
+	header := resp.Header()
+	httpResp.Header.VisitAll(func(key, value []byte) {
+		header.Set(string(key), string(value))
+	})
+	resp.header = header
+	resp.rawBody = httpResp.Body()
+	return resp, nil
 }
 
 func newProxy(path, dest string) (proxy, error) {

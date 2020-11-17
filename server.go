@@ -72,8 +72,8 @@ func (s *Server) AddAuthMiddleware(m Middleware) {
 	s.authMiddleware = append(s.authMiddleware, m)
 }
 
-//AddRespMiddleware ..
-func (s *Server) AddRespMiddleware(m RespMiddleware) {
+//AddResponseMiddleware ..
+func (s *Server) AddResponseMiddleware(m RespMiddleware) {
 	s.respMiddleware = append(s.respMiddleware, m)
 }
 
@@ -184,8 +184,7 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 	}
 	for _, proxy := range s.proxies {
 		if proxy.match(string(url)) {
-			proxy.execute(s, ctx)
-			return nil, nil
+			return proxy.execute(s, ctx)
 		}
 	}
 	for _, file := range s.files {
@@ -205,6 +204,10 @@ func (s *Server) Serve(port int) error {
 			s.logW(e)
 		}
 		if resp != nil {
+			for _, m := range s.respMiddleware {
+				m(resp)
+			}
+
 			ctx.SetStatusCode(resp.Status())
 			for key, valArr := range resp.Header() {
 				if len(valArr) > 0 {
