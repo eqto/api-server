@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/eqto/go-db"
 	log "github.com/eqto/go-logger"
@@ -191,9 +192,9 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	return e
 }
 
-//Serve ...
+//Serve ..
 func (s *Server) Serve(port int) error {
-	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(fastCtx *fasthttp.RequestCtx) {
+	handler := func(fastCtx *fasthttp.RequestCtx) {
 		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response, s.cn)
 		if e != nil {
 			s.logW(e)
@@ -203,40 +204,14 @@ func (s *Server) Serve(port int) error {
 		if e := s.execute(fastCtx, ctx); e != nil {
 			s.logW(e)
 		}
-		// if resp != nil {
-		// 	if len(s.respMiddleware) > 0 {
-		// 		// if req, e := parseRequest(string(fastCtx.Method()), string(fastCtx.RequestURI()), fastCtx.Request.Header.RawHeaders(), fastCtx.Request.Body()); e == nil {
-		// 		// 	for _, m := range s.respMiddleware {
-		// 		// 		m(req, resp)
-		// 		// 	}
-		// 		// } else {
-		// 		// 	s.warn(errors.Wrap(e, `unable to parse request for response middleware`))
-		// 		// }
-		// 	}
+	}
+	handler = fasthttp.CompressHandlerBrotliLevel(
+		fasthttp.TimeoutHandler(handler, 60*time.Second, `Timeout`),
+		fasthttp.CompressBrotliDefaultCompression,
+		fasthttp.CompressDefaultCompression,
+	)
 
-		// 	fastCtx.SetStatusCode(resp.r.Status())
-		// 	for key, valArr := range resp.Header() {
-		// 		if len(valArr) > 0 {
-		// 			fastCtx.Response.Header.Set(key, valArr[0])
-		// 		} else {
-		// 			fastCtx.Response.Header.Set(key, ``)
-		// 		}
-		// 	}
-		// 	hasEncoding := fastCtx.Request.Header.HasAcceptEncoding
-		// 	if hasEncoding(`br`) {
-		// 		fasthttp.WriteBrotli(fastCtx.Response.BodyWriter(), resp.Body())
-		// 		fastCtx.Response.Header.Add(`Content-Encoding`, `br`)
-		// 	} else if hasEncoding(`deflate`) {
-		// 		fasthttp.WriteDeflate(fastCtx.Response.BodyWriter(), resp.Body())
-		// 		fastCtx.Response.Header.Add(`Content-Encoding`, `deflate`)
-		// 	} else if hasEncoding(`gzip`) {
-		// 		fasthttp.WriteGzip(fastCtx.Response.BodyWriter(), resp.Body())
-		// 		fastCtx.Response.Header.Add(`Content-Encoding`, `gzip`)
-		// 	} else {
-		// 		fastCtx.SetBody(resp.Body())
-		// 	}
-		// }
-	})
+	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), handler)
 }
 
 //SetProduction ...

@@ -4,7 +4,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/valyala/fasthttp"
 )
@@ -47,13 +46,9 @@ func newFile(path, dest, redirectTo string) (file, error) {
 	}
 
 	f := file{
-		path:  path,
-		regex: regex,
-		handler: fasthttp.CompressHandlerBrotliLevel(
-			fasthttp.TimeoutHandler(fs.NewRequestHandler(), 60*time.Second, `Timeout`),
-			fasthttp.CompressBrotliDefaultCompression,
-			fasthttp.CompressDefaultCompression,
-		),
+		path:    path,
+		regex:   regex,
+		handler: fs.NewRequestHandler(),
 	}
 	if e != nil {
 		return f, e
