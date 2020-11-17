@@ -30,29 +30,23 @@ func postprocessResponse(resp *fasthttp.Response) {
 	resp.Header.Del("Connection")
 }
 
-func (p *proxy) execute(s *Server, ctx *context) (Response, error) {
+func (p *proxy) execute(s *Server, ctx *context) error {
 	if len(s.respMiddleware) == 0 {
 		prepareRequest(ctx.req.httpReq)
-		if e := p.client.DoTimeout(ctx.req.httpReq, ctx.resp, 60*time.Second); e != nil {
-			return nil, nil
+		if e := p.client.DoTimeout(ctx.req.httpReq, ctx.resp.httpResp, 60*time.Second); e != nil {
+			return e
 		}
-		postprocessResponse(ctx.resp)
-		return nil, nil
+		postprocessResponse(ctx.resp.httpResp)
+		return nil
 	}
 	httpResp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(httpResp)
 	if e := p.client.DoTimeout(ctx.req.httpReq, httpResp, 60*time.Second); e != nil {
-		return newResponseError(StatusBadGateway, e)
+		ctx.resp.setError(StatusBadGateway, e)
+		return e
 	}
-	resp := newResponse(StatusOK)
-	resp.status = httpResp.StatusCode()
-	header := resp.Header()
-	httpResp.Header.VisitAll(func(key, value []byte) {
-		header.Set(string(key), string(value))
-	})
-	resp.header = header
-	resp.rawBody = httpResp.Body()
-	return resp, nil
+	httpResp.CopyTo(ctx.resp.httpResp)
+	return nil
 }
 
 func newProxy(path, dest string) (proxy, error) {

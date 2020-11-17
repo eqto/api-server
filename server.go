@@ -161,25 +161,34 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) (Response, error) {
+func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	path := ctx.req.url.Path
 	s.logD(`Request path:`, path)
 	route, e := s.GetRoute(ctx.req.Method(), path)
 	if e == nil {
-		return route.execute(s, ctx)
+		e := route.execute(s, ctx)
+		if e != nil && ctx.resp.err == nil {
+			ctx.resp.setError(StatusInternalServerError, e)
+		}
+		return e
 	}
 	for _, proxy := range s.proxies {
 		if proxy.match(string(path)) {
-			return proxy.execute(s, ctx)
+			e := proxy.execute(s, ctx)
+			if e != nil && ctx.resp.err == nil {
+				ctx.resp.setError(StatusInternalServerError, e)
+			}
+			return e
 		}
 	}
 	for _, file := range s.files {
 		if file.match(string(path)) {
 			file.handler(fastCtx)
-			return nil, nil
+			return nil
 		}
 	}
-	return newResponseError(StatusNotFound, e)
+	ctx.resp.setError(StatusNotFound, e)
+	return e
 }
 
 //Serve ...
@@ -191,43 +200,42 @@ func (s *Server) Serve(port int) error {
 			fastCtx.WriteString(e.Error())
 			return
 		}
-		resp, e := s.execute(fastCtx, ctx)
-		if e != nil {
+		if e := s.execute(fastCtx, ctx); e != nil {
 			s.logW(e)
 		}
-		if resp != nil {
-			if len(s.respMiddleware) > 0 {
-				// if req, e := parseRequest(string(fastCtx.Method()), string(fastCtx.RequestURI()), fastCtx.Request.Header.RawHeaders(), fastCtx.Request.Body()); e == nil {
-				// 	for _, m := range s.respMiddleware {
-				// 		m(req, resp)
-				// 	}
-				// } else {
-				// 	s.warn(errors.Wrap(e, `unable to parse request for response middleware`))
-				// }
-			}
+		// if resp != nil {
+		// 	if len(s.respMiddleware) > 0 {
+		// 		// if req, e := parseRequest(string(fastCtx.Method()), string(fastCtx.RequestURI()), fastCtx.Request.Header.RawHeaders(), fastCtx.Request.Body()); e == nil {
+		// 		// 	for _, m := range s.respMiddleware {
+		// 		// 		m(req, resp)
+		// 		// 	}
+		// 		// } else {
+		// 		// 	s.warn(errors.Wrap(e, `unable to parse request for response middleware`))
+		// 		// }
+		// 	}
 
-			fastCtx.SetStatusCode(resp.Status())
-			for key, valArr := range resp.Header() {
-				if len(valArr) > 0 {
-					fastCtx.Response.Header.Set(key, valArr[0])
-				} else {
-					fastCtx.Response.Header.Set(key, ``)
-				}
-			}
-			hasEncoding := fastCtx.Request.Header.HasAcceptEncoding
-			if hasEncoding(`br`) {
-				fasthttp.WriteBrotli(fastCtx.Response.BodyWriter(), resp.Body())
-				fastCtx.Response.Header.Add(`Content-Encoding`, `br`)
-			} else if hasEncoding(`deflate`) {
-				fasthttp.WriteDeflate(fastCtx.Response.BodyWriter(), resp.Body())
-				fastCtx.Response.Header.Add(`Content-Encoding`, `deflate`)
-			} else if hasEncoding(`gzip`) {
-				fasthttp.WriteGzip(fastCtx.Response.BodyWriter(), resp.Body())
-				fastCtx.Response.Header.Add(`Content-Encoding`, `gzip`)
-			} else {
-				fastCtx.SetBody(resp.Body())
-			}
-		}
+		// 	fastCtx.SetStatusCode(resp.r.Status())
+		// 	for key, valArr := range resp.Header() {
+		// 		if len(valArr) > 0 {
+		// 			fastCtx.Response.Header.Set(key, valArr[0])
+		// 		} else {
+		// 			fastCtx.Response.Header.Set(key, ``)
+		// 		}
+		// 	}
+		// 	hasEncoding := fastCtx.Request.Header.HasAcceptEncoding
+		// 	if hasEncoding(`br`) {
+		// 		fasthttp.WriteBrotli(fastCtx.Response.BodyWriter(), resp.Body())
+		// 		fastCtx.Response.Header.Add(`Content-Encoding`, `br`)
+		// 	} else if hasEncoding(`deflate`) {
+		// 		fasthttp.WriteDeflate(fastCtx.Response.BodyWriter(), resp.Body())
+		// 		fastCtx.Response.Header.Add(`Content-Encoding`, `deflate`)
+		// 	} else if hasEncoding(`gzip`) {
+		// 		fasthttp.WriteGzip(fastCtx.Response.BodyWriter(), resp.Body())
+		// 		fastCtx.Response.Header.Add(`Content-Encoding`, `gzip`)
+		// 	} else {
+		// 		fastCtx.SetBody(resp.Body())
+		// 	}
+		// }
 	})
 }
 

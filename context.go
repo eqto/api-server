@@ -20,7 +20,7 @@ type context struct {
 	Context
 	s    *Server
 	req  request
-	resp *fasthttp.Response
+	resp response
 	sess *session
 
 	jsonResp, vars json.Object
@@ -81,7 +81,7 @@ func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *d
 	ctx := &context{
 		s:      s,
 		req:    request{httpReq: req},
-		resp:   resp,
+		resp:   response{httpResp: resp},
 		cn:     cn,
 		sess:   &session{},
 		lockCn: sync.Mutex{},

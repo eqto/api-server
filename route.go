@@ -36,48 +36,40 @@ func (r *Route) AddFuncAction(f func(ctx Context) (interface{}, error), property
 	return act, nil
 }
 
-func (r *Route) execute(s *Server, ctx *context) (Response, error) {
+func (r *Route) execute(s *Server, ctx *context) error {
 	if e := ctx.begin(); e != nil {
-		return newResponseError(StatusInternalServerError, e)
+		ctx.resp.setError(StatusInternalServerError, e)
+		return e
 	}
-	defer ctx.commit()
+	defer func() {
+		if ctx.resp.err != nil {
+			ctx.rollback()
+		} else {
+			ctx.commit()
+		}
+	}()
 
 	if s.routeAuthenticator != nil {
 		for _, m := range s.routeAuthenticator {
 			if r.secure {
 				if e := m(ctx); e != nil {
-					ctx.rollback()
-					return newResponseError(StatusUnauthorized, e)
+					ctx.resp.setError(StatusUnauthorized, e)
+					return e
 				}
 			}
-		}
-	}
-	resp := newResponse(StatusOK)
-
-	for _, action := range r.action {
-		result, e := action.execute(ctx)
-		if result != nil {
-			if resp, ok := result.(Response); ok {
-				if resp.Status() != StatusOK && e == nil {
-					e = resp.Error()
-				}
-			}
-		}
-		if e != nil {
-			ctx.rollback()
-			if result != nil {
-				if resp, ok := result.(Response); ok {
-					return resp, e
-				}
-			}
-			return newResponseError(StatusInternalServerError, e)
-		}
-		if prop := action.property(); prop != `` {
-			ctx.put(prop, result)
 		}
 	}
 
-	return resp, nil
+	for _, action := range r.action {
+		if result, e := action.execute(ctx); e == nil {
+			if prop := action.property(); prop != `` {
+				ctx.put(prop, result)
+			}
+		} else {
+			ctx.resp.setError(StatusInternalServerError, e)
+		}
+	}
+	return nil
 }
 
 //NewRoute create route
