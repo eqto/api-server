@@ -32,8 +32,8 @@ func postprocessResponse(resp *fasthttp.Response) {
 
 func (p *proxy) execute(s *Server, ctx *context) (Response, error) {
 	if len(s.respMiddleware) == 0 {
-		prepareRequest(ctx.req)
-		if e := p.client.DoTimeout(ctx.req, ctx.resp, 60*time.Second); e != nil {
+		prepareRequest(ctx.req.httpReq)
+		if e := p.client.DoTimeout(ctx.req.httpReq, ctx.resp, 60*time.Second); e != nil {
 			return nil, nil
 		}
 		postprocessResponse(ctx.resp)
@@ -41,7 +41,7 @@ func (p *proxy) execute(s *Server, ctx *context) (Response, error) {
 	}
 	httpResp := fasthttp.AcquireResponse()
 	defer fasthttp.ReleaseResponse(httpResp)
-	if e := p.client.DoTimeout(ctx.req, httpResp, 60*time.Second); e != nil {
+	if e := p.client.DoTimeout(ctx.req.httpReq, httpResp, 60*time.Second); e != nil {
 		return newResponseError(StatusBadGateway, e)
 	}
 	resp := newResponse(StatusOK)

@@ -60,7 +60,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		//     "filter": "fulltext"
 		//   }
 		// }
-		js := ctx.jsonReq
+		js := ctx.req.json
 
 		if filters := js.GetJSONObject(`filters`); filters != nil && len(filters) > 0 {
 			for key := range filters {
@@ -183,7 +183,7 @@ func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interfac
 				values = append(values, item)
 			}
 		} else {
-			val := ctx.getRequest(param)
+			val := ctx.req.get(param)
 			if val == nil {
 				return nil, fmt.Errorf(errMissingParameter.Error(), param)
 			}
@@ -197,7 +197,7 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 	if q.arrayName != `` { //execute array
 		result := []interface{}{}
 
-		if objs := ctx.jsonReq.GetArray(q.arrayName); objs != nil {
+		if objs := ctx.req.json.GetArray(q.arrayName); objs != nil {
 			for _, obj := range objs {
 				values, e := q.populateValues(ctx, obj)
 				if e != nil {
@@ -215,7 +215,7 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 					result = append(result, r)
 				}
 			}
-		} else if arr := ctx.jsonReq.Array(q.arrayName); arr != nil {
+		} else if arr := ctx.req.json.Array(q.arrayName); arr != nil {
 			for _, val := range arr {
 				values, e := q.populateValues(ctx, val)
 				if e != nil {

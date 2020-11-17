@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	uri "net/url"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -163,25 +162,19 @@ func (s *Server) NormalizeFunc(n bool) {
 }
 
 func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) (Response, error) {
-	method := string(ctx.req.Header.Method())
-	url := string(ctx.req.Header.RequestURI())
-	s.logD(`Request url:`, url)
-
-	u, e := uri.Parse(url)
-	if e != nil {
-		return nil, e
-	}
-	route, e := s.GetRoute(method, u.Path)
+	path := ctx.req.url.Path
+	s.logD(`Request path:`, path)
+	route, e := s.GetRoute(ctx.req.Method(), path)
 	if e == nil {
 		return route.execute(s, ctx)
 	}
 	for _, proxy := range s.proxies {
-		if proxy.match(string(url)) {
+		if proxy.match(string(path)) {
 			return proxy.execute(s, ctx)
 		}
 	}
 	for _, file := range s.files {
-		if file.match(string(url)) {
+		if file.match(string(path)) {
 			file.handler(fastCtx)
 			return nil, nil
 		}
@@ -204,13 +197,13 @@ func (s *Server) Serve(port int) error {
 		}
 		if resp != nil {
 			if len(s.respMiddleware) > 0 {
-				if req, e := parseRequest(string(fastCtx.Method()), string(fastCtx.RequestURI()), fastCtx.Request.Header.RawHeaders(), fastCtx.Request.Body()); e == nil {
-					for _, m := range s.respMiddleware {
-						m(req, resp)
-					}
-				} else {
-					s.warn(errors.Wrap(e, `unable to parse request for response middleware`))
-				}
+				// if req, e := parseRequest(string(fastCtx.Method()), string(fastCtx.RequestURI()), fastCtx.Request.Header.RawHeaders(), fastCtx.Request.Body()); e == nil {
+				// 	for _, m := range s.respMiddleware {
+				// 		m(req, resp)
+				// 	}
+				// } else {
+				// 	s.warn(errors.Wrap(e, `unable to parse request for response middleware`))
+				// }
 			}
 
 			fastCtx.SetStatusCode(resp.Status())

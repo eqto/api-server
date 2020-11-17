@@ -14,18 +14,16 @@ import (
 
 //Context ..
 type Context interface {
-	URL() *url.URL
 	Session() Session
 }
 type context struct {
 	Context
 	s    *Server
-	req  *fasthttp.Request
+	req  request
 	resp *fasthttp.Response
 	sess *session
-	url  *url.URL
 
-	jsonReq, jsonResp, vars json.Object
+	jsonResp, vars json.Object
 
 	cn     *db.Connection
 	tx     *db.Tx
@@ -35,10 +33,6 @@ type context struct {
 //Session ..
 func (c *context) Session() Session {
 	return c.sess
-}
-
-func (c *context) URL() *url.URL {
-	return c.url
 }
 
 func (c *context) begin() error {
@@ -83,32 +77,29 @@ func (c *context) put(property string, value interface{}) {
 	}
 }
 
-func (c *context) getRequest(key string) interface{} {
-	if c.jsonReq.Has(key) {
-		return c.jsonReq.Get(key)
-	}
-	return c.url.Query().Get(key)
-}
-
 func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *db.Connection) (*context, error) {
 	ctx := &context{
 		s:      s,
-		req:    req,
+		req:    request{httpReq: req},
 		resp:   resp,
 		cn:     cn,
 		sess:   &session{},
 		lockCn: sync.Mutex{},
 	}
-	ctx.url, _ = url.Parse(string(req.RequestURI()))
+	url, e := url.Parse(string(req.RequestURI()))
+	if url == nil {
+		return nil, errors.Wrap(e, `invalid url `+string(req.RequestURI()))
+	}
+	ctx.req.url = url
 
 	if bytes.HasPrefix(req.Header.ContentType(), []byte(`application/json`)) {
 		req, e := json.Parse(req.Body())
 		if e != nil {
 			return nil, errors.Wrap(e, `invalid json body`)
 		}
-		ctx.jsonReq = req
+		ctx.req.json = req
 	} else {
-		ctx.jsonReq = json.Object{}
+		ctx.req.json = json.Object{}
 	}
 	return ctx, nil
 }
