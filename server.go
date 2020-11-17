@@ -123,7 +123,7 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 }
 
 //AddFuncRoute add route with single func action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) AddFuncRoute(f func(ctx Ctx) (interface{}, error), secure bool) (*Route, error) {
+func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure bool) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
 	if strings.Count(name, `.`) > 1 {
@@ -162,7 +162,7 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(ctx *ctx) (Response, error) {
+func (s *Server) execute(ctx *context) (Response, error) {
 	method := string(ctx.req.Header.Method())
 	url := string(ctx.req.Header.RequestURI())
 	s.logD(`Request url:`, url)

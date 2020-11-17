@@ -12,13 +12,13 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//Ctx ..
-type Ctx interface {
+//Context ..
+type Context interface {
 	URI()
 	Session() Session
 }
-type ctx struct {
-	Ctx
+type context struct {
+	Context
 	s    *Server
 	req  *fasthttp.Request
 	resp *fasthttp.Response
@@ -33,15 +33,15 @@ type ctx struct {
 }
 
 //Session ..
-func (c *ctx) Session() Session {
+func (c *context) Session() Session {
 	return c.sess
 }
 
-func (c *ctx) URL() *url.URL {
+func (c *context) URL() *url.URL {
 	return c.url
 }
 
-func (c *ctx) begin() error {
+func (c *context) begin() error {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
 	if c.cn != nil {
@@ -53,7 +53,7 @@ func (c *ctx) begin() error {
 	}
 	return nil
 }
-func (c *ctx) rollback() {
+func (c *context) rollback() {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
 	if c.tx != nil {
@@ -61,7 +61,7 @@ func (c *ctx) rollback() {
 		c.tx = nil
 	}
 }
-func (c *ctx) commit() {
+func (c *context) commit() {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
 	if c.tx != nil {
@@ -69,7 +69,7 @@ func (c *ctx) commit() {
 	}
 }
 
-func (c *ctx) put(property string, value interface{}) {
+func (c *context) put(property string, value interface{}) {
 	if strings.HasPrefix(property, `$`) { //save to vars
 		if c.vars == nil {
 			c.vars = json.Object{}
@@ -83,15 +83,15 @@ func (c *ctx) put(property string, value interface{}) {
 	}
 }
 
-func (c *ctx) getRequest(key string) interface{} {
+func (c *context) getRequest(key string) interface{} {
 	if c.jsonReq.Has(key) {
 		return c.jsonReq.Get(key)
 	}
 	return c.url.Query().Get(key)
 }
 
-func newCtx(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *db.Connection) (*ctx, error) {
-	ctx := &ctx{
+func newCtx(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *db.Connection) (*context, error) {
+	ctx := &context{
 		s:      s,
 		req:    req,
 		resp:   resp,

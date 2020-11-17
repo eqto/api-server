@@ -46,7 +46,7 @@ func (q *actionQuery) params() []string {
 	return q.qParams
 }
 
-func (q *actionQuery) executeItem(ctx *ctx, values []interface{}) (interface{}, error) {
+func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface{}, error) {
 	var data interface{}
 	var err error
 
@@ -169,7 +169,7 @@ func (q *actionQuery) executeItem(ctx *ctx, values []interface{}) (interface{}, 
 	return data, nil
 }
 
-func (q *actionQuery) populateValues(ctx *ctx, item interface{}) ([]interface{}, error) {
+func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interface{}, error) {
 	values := []interface{}{}
 	for _, param := range q.qParams {
 		if strings.HasPrefix(param, `$session.`) {
@@ -193,7 +193,7 @@ func (q *actionQuery) populateValues(ctx *ctx, item interface{}) ([]interface{},
 	return values, nil
 }
 
-func (q *actionQuery) execute(ctx *ctx) (interface{}, error) {
+func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 	if q.arrayName != `` { //execute array
 		result := []interface{}{}
 
