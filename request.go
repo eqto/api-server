@@ -20,11 +20,11 @@ type request struct {
 	json    json.Object
 }
 
-func (r request) Method() string {
+func (r *request) Method() string {
 	return string(r.httpReq.Header.Method())
 }
 
-func (r request) get(key string) interface{} {
+func (r *request) get(key string) interface{} {
 	if r.json.Has(key) {
 		return r.json.Get(key)
 	}

@@ -41,11 +41,11 @@ func (c *context) Session() Session {
 }
 
 func (c *context) Request() Request {
-	return c.req
+	return &c.req
 }
 
 func (c *context) Response() Response {
-	return c.resp
+	return &c.resp
 }
 
 func (c *context) Next() {

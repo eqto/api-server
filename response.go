@@ -18,15 +18,15 @@ type response struct {
 	errFrame []log.Frame
 }
 
-func (r response) Body() []byte {
+func (r *response) Body() []byte {
 	return r.httpResp.Body()
 }
 
-func (r response) SetBody(body []byte) {
+func (r *response) SetBody(body []byte) {
 	r.httpResp.SetBody(body)
 }
 
-func (r response) setError(status int, e error) {
+func (r *response) setError(status int, e error) {
 	if r.err == nil {
 		r.httpResp.SetStatusCode(status)
 		r.err = e
