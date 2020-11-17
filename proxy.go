@@ -32,7 +32,7 @@ func postprocessResponse(resp *fasthttp.Response) {
 
 func (p *proxy) execute(s *Server, ctx *fasthttp.RequestCtx) (Response, error) {
 	httpReq := &ctx.Request
-	if s.respMiddleware == nil || len(s.respMiddleware) == 0 {
+	if len(s.respMiddleware) == 0 {
 		httpResp := &ctx.Response
 		prepareRequest(httpReq)
 		if e := p.client.DoTimeout(httpReq, httpResp, 60*time.Second); e != nil {

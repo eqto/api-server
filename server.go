@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	uri "net/url"
 	"reflect"
@@ -11,6 +10,7 @@ import (
 
 	"github.com/eqto/go-db"
 	log "github.com/eqto/go-logger"
+	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 )
 
@@ -204,8 +204,14 @@ func (s *Server) Serve(port int) error {
 			s.logW(e)
 		}
 		if resp != nil {
-			for _, m := range s.respMiddleware {
-				m(resp)
+			if len(s.respMiddleware) > 0 {
+				if req, e := parseRequest(string(ctx.Method()), string(ctx.RequestURI()), ctx.Request.Header.RawHeaders(), ctx.Request.Body()); e == nil {
+					for _, m := range s.respMiddleware {
+						m(req, resp)
+					}
+				} else {
+					s.warn(errors.Wrap(e, `unable to parse request for response middleware`))
+				}
 			}
 
 			ctx.SetStatusCode(resp.Status())

@@ -4,4 +4,4 @@ package api
 type Middleware func(ctx RequestCtx) error
 
 //RespMiddleware ...
-type RespMiddleware func(resp Response)
+type RespMiddleware func(req Request, resp Response)
