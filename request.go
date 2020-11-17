@@ -24,6 +24,10 @@ func (r *request) Method() string {
 	return string(r.httpReq.Header.Method())
 }
 
+func (r *request) URL() *url.URL {
+	return r.url
+}
+
 func (r *request) get(key string) interface{} {
 	if r.json.Has(key) {
 		return r.json.Get(key)
