@@ -123,7 +123,7 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 }
 
 //AddFuncRoute add route with single func action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure bool) (*Route, error) {
+func (s *Server) AddFuncRoute(f func(ctx Ctx) (interface{}, error), secure bool) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
 	if strings.Count(name, `.`) > 1 {
@@ -162,9 +162,9 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
-	method := string(ctx.Method())
-	url := string(ctx.RequestURI())
+func (s *Server) execute(ctx *ctx) (Response, error) {
+	method := string(ctx.req.Header.Method())
+	url := string(ctx.req.Header.RequestURI())
 	s.logD(`Request url:`, url)
 
 	u, e := uri.Parse(url)
@@ -173,39 +173,38 @@ func (s *Server) execute(ctx *fasthttp.RequestCtx) (Response, error) {
 	}
 	route, e := s.GetRoute(method, u.Path)
 	if e == nil {
-		header := ctx.Request.Header.RawHeaders()
-		body := ctx.Request.Body()
-		sess := &session{}
-		req, e := parseRequest(method, url, header, body)
-		if e != nil {
-			return newResponseError(StatusBadRequest, e)
-		}
-		return route.execute(s, newRequestCtx(s.cn, req, sess))
+		return route.execute(s, ctx)
 	}
-	for _, proxy := range s.proxies {
-		if proxy.match(string(url)) {
-			return proxy.execute(s, ctx)
-		}
-	}
-	for _, file := range s.files {
-		if file.match(string(url)) {
-			file.handler(ctx)
-			return nil, nil
-		}
-	}
+	// for _, proxy := range s.proxies {
+	// 	if proxy.match(string(url)) {
+	// 		return proxy.execute(s, ctx)
+	// 	}
+	// }
+	// for _, file := range s.files {
+	// 	if file.match(string(url)) {
+	// 		file.handler(ctx)
+	// 		return nil, nil
+	// 	}
+	// }
 	return newResponseError(StatusNotFound, e)
 }
 
 //Serve ...
 func (s *Server) Serve(port int) error {
-	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(ctx *fasthttp.RequestCtx) {
-		resp, e := s.execute(ctx)
+	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(reqCtx *fasthttp.RequestCtx) {
+		apiCtx, e := newCtx(s, &reqCtx.Request, &reqCtx.Response, s.cn)
+		if e != nil {
+			s.logW(e)
+			reqCtx.WriteString(e.Error())
+			return
+		}
+		resp, e := s.execute(apiCtx)
 		if e != nil {
 			s.logW(e)
 		}
 		if resp != nil {
 			if len(s.respMiddleware) > 0 {
-				if req, e := parseRequest(string(ctx.Method()), string(ctx.RequestURI()), ctx.Request.Header.RawHeaders(), ctx.Request.Body()); e == nil {
+				if req, e := parseRequest(string(reqCtx.Method()), string(reqCtx.RequestURI()), reqCtx.Request.Header.RawHeaders(), reqCtx.Request.Body()); e == nil {
 					for _, m := range s.respMiddleware {
 						m(req, resp)
 					}
@@ -214,26 +213,26 @@ func (s *Server) Serve(port int) error {
 				}
 			}
 
-			ctx.SetStatusCode(resp.Status())
+			reqCtx.SetStatusCode(resp.Status())
 			for key, valArr := range resp.Header() {
 				if len(valArr) > 0 {
-					ctx.Response.Header.Set(key, valArr[0])
+					reqCtx.Response.Header.Set(key, valArr[0])
 				} else {
-					ctx.Response.Header.Set(key, ``)
+					reqCtx.Response.Header.Set(key, ``)
 				}
 			}
-			hasEncoding := ctx.Request.Header.HasAcceptEncoding
+			hasEncoding := reqCtx.Request.Header.HasAcceptEncoding
 			if hasEncoding(`br`) {
-				fasthttp.WriteBrotli(ctx.Response.BodyWriter(), resp.Body())
-				ctx.Response.Header.Add(`Content-Encoding`, `br`)
+				fasthttp.WriteBrotli(reqCtx.Response.BodyWriter(), resp.Body())
+				reqCtx.Response.Header.Add(`Content-Encoding`, `br`)
 			} else if hasEncoding(`deflate`) {
-				fasthttp.WriteDeflate(ctx.Response.BodyWriter(), resp.Body())
-				ctx.Response.Header.Add(`Content-Encoding`, `deflate`)
+				fasthttp.WriteDeflate(reqCtx.Response.BodyWriter(), resp.Body())
+				reqCtx.Response.Header.Add(`Content-Encoding`, `deflate`)
 			} else if hasEncoding(`gzip`) {
-				fasthttp.WriteGzip(ctx.Response.BodyWriter(), resp.Body())
-				ctx.Response.Header.Add(`Content-Encoding`, `gzip`)
+				fasthttp.WriteGzip(reqCtx.Response.BodyWriter(), resp.Body())
+				reqCtx.Response.Header.Add(`Content-Encoding`, `gzip`)
 			} else {
-				ctx.SetBody(resp.Body())
+				reqCtx.SetBody(resp.Body())
 			}
 		}
 	})

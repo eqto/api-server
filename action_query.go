@@ -46,7 +46,7 @@ func (q *actionQuery) params() []string {
 	return q.qParams
 }
 
-func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface{}, error) {
+func (q *actionQuery) executeItem(ctx *ctx, values []interface{}) (interface{}, error) {
 	var data interface{}
 	var err error
 
@@ -60,7 +60,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		//     "filter": "fulltext"
 		//   }
 		// }
-		js := ctx.req.jsonBody
+		js := ctx.jsonReq
 
 		if filters := js.GetJSONObject(`filters`); filters != nil && len(filters) > 0 {
 			for key := range filters {
@@ -163,13 +163,13 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		data, err = ctx.tx.Exec(q.rawQuery, values...)
 	}
 	if err != nil {
-		ctx.server.logE(err)
+		ctx.s.logE(err)
 		return nil, fmt.Errorf(errExecutingQuery.Error(), q.rawQuery)
 	}
 	return data, nil
 }
 
-func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interface{}, error) {
+func (q *actionQuery) populateValues(ctx *ctx, item interface{}) ([]interface{}, error) {
 	values := []interface{}{}
 	for _, param := range q.qParams {
 		if strings.HasPrefix(param, `$session.`) {
@@ -183,7 +183,7 @@ func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interfac
 				values = append(values, item)
 			}
 		} else {
-			val := ctx.req.get(param)
+			val := ctx.getRequest(param)
 			if val == nil {
 				return nil, fmt.Errorf(errMissingParameter.Error(), param)
 			}
@@ -193,11 +193,11 @@ func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interfac
 	return values, nil
 }
 
-func (q *actionQuery) execute(ctx *context) (interface{}, error) {
+func (q *actionQuery) execute(ctx *ctx) (interface{}, error) {
 	if q.arrayName != `` { //execute array
 		result := []interface{}{}
 
-		if objs := ctx.req.jsonBody.GetArray(q.arrayName); objs != nil {
+		if objs := ctx.jsonReq.GetArray(q.arrayName); objs != nil {
 			for _, obj := range objs {
 				values, e := q.populateValues(ctx, obj)
 				if e != nil {
@@ -215,7 +215,7 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 					result = append(result, r)
 				}
 			}
-		} else if arr := ctx.req.jsonBody.Array(q.arrayName); arr != nil {
+		} else if arr := ctx.jsonReq.Array(q.arrayName); arr != nil {
 			for _, val := range arr {
 				values, e := q.populateValues(ctx, val)
 				if e != nil {
@@ -235,13 +235,12 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 			}
 		}
 		return result, nil
-	} else {
-		values, e := q.populateValues(ctx, nil)
-		if e != nil {
-			return nil, e
-		}
-		return q.executeItem(ctx, values)
 	}
+	values, e := q.populateValues(ctx, nil)
+	if e != nil {
+		return nil, e
+	}
+	return q.executeItem(ctx, values)
 }
 
 func newQueryAction(query, property, params string) (*actionQuery, error) {
