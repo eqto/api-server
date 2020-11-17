@@ -14,7 +14,7 @@ import (
 
 //Context ..
 type Context interface {
-	URI()
+	URL() *url.URL
 	Session() Session
 }
 type context struct {
@@ -90,7 +90,7 @@ func (c *context) getRequest(key string) interface{} {
 	return c.url.Query().Get(key)
 }
 
-func newCtx(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *db.Connection) (*context, error) {
+func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *db.Connection) (*context, error) {
 	ctx := &context{
 		s:      s,
 		req:    req,

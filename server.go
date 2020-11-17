@@ -192,7 +192,7 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) (Response, 
 //Serve ...
 func (s *Server) Serve(port int) error {
 	return fasthttp.ListenAndServe(fmt.Sprintf(`:%d`, port), func(fastCtx *fasthttp.RequestCtx) {
-		ctx, e := newCtx(s, &fastCtx.Request, &fastCtx.Response, s.cn)
+		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response, s.cn)
 		if e != nil {
 			s.logW(e)
 			fastCtx.WriteString(e.Error())
