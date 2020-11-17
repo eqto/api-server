@@ -48,7 +48,7 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 			}
 			defer reqCtx.rollback()
 			if r.secure {
-				if e := m.f(reqCtx); e != nil {
+				if e := m(reqCtx); e != nil {
 					reqCtx.rollback()
 					return newResponseError(StatusUnauthorized, e)
 				}
@@ -62,7 +62,7 @@ func (r *Route) execute(s *Server, reqCtx *requestCtx) (Response, error) {
 				return newResponseError(StatusInternalServerError, e)
 			}
 			defer reqCtx.rollback()
-			if e := m.f(reqCtx); e != nil {
+			if e := m(reqCtx); e != nil {
 				reqCtx.rollback()
 				return newResponseError(StatusInternalServerError, e)
 			}
