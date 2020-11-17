@@ -30,6 +30,7 @@ type Server struct {
 
 	middleware     []Middleware
 	authMiddleware []Middleware
+	respMiddleware []RespMiddleware
 
 	logD func(v ...interface{})
 	logW func(v ...interface{})
@@ -68,7 +69,12 @@ func (s *Server) AddMiddleware(m Middleware) {
 
 //AddAuthMiddleware ..
 func (s *Server) AddAuthMiddleware(m Middleware) {
-	s.middleware = append(s.authMiddleware, m)
+	s.authMiddleware = append(s.authMiddleware, m)
+}
+
+//AddRespMiddleware ..
+func (s *Server) AddRespMiddleware(m RespMiddleware) {
+	s.respMiddleware = append(s.respMiddleware, m)
 }
 
 //Proxy ...
