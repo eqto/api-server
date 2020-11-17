@@ -29,6 +29,7 @@ type Server struct {
 	dbConnected        bool
 	routeAuthenticator []RouteAuthenticator
 	middleware         []Middleware
+	finalHandler       []func(ctx Context)
 
 	logD func(v ...interface{})
 	logW func(v ...interface{})
@@ -63,6 +64,11 @@ func (s *Server) SetDatabase(host string, port int, username, password, name str
 //AddMiddleware ..
 func (s *Server) AddMiddleware(m Middleware) {
 	s.middleware = append(s.middleware, m)
+}
+
+//AddFinalHandler ..
+func (s *Server) AddFinalHandler(f func(ctx Context)) {
+	s.finalHandler = append(s.finalHandler, f)
 }
 
 //AddRouteAuthenticator ..
@@ -203,6 +209,10 @@ func (s *Server) Serve(port int) error {
 		}
 		if e := s.execute(fastCtx, ctx); e != nil {
 			s.logW(e)
+		}
+
+		for _, h := range s.finalHandler {
+			h(ctx)
 		}
 	}
 	handler = fasthttp.CompressHandlerBrotliLevel(
