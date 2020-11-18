@@ -110,7 +110,11 @@ func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *d
 	ctx.req.url = url
 
 	if bytes.HasPrefix(req.Header.ContentType(), []byte(`application/json`)) {
-		req, e := json.Parse(req.Body())
+		body := req.Body()
+		if len(body) == 0 {
+			body = []byte(`{}`)
+		}
+		req, e := json.Parse(body)
 		if e != nil {
 			return nil, errors.Wrap(e, `invalid json body`)
 		}
