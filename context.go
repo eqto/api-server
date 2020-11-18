@@ -17,6 +17,7 @@ type Context interface {
 	Session() Session
 	Request() Request
 	Response() Response
+	Tx() *db.Tx
 }
 
 type context struct {
@@ -48,8 +49,8 @@ func (c *context) Response() Response {
 	return &c.resp
 }
 
-func (c *context) Next() {
-	c.next = true
+func (c *context) Tx() *db.Tx {
+	return c.tx
 }
 
 func (c *context) begin() error {

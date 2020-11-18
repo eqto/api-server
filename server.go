@@ -167,28 +167,39 @@ func (s *Server) NormalizeFunc(n bool) {
 func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	path := ctx.req.url.Path
 	s.logD(`Request path:`, path)
+	if e := ctx.begin(); e != nil {
+		ctx.resp.setError(StatusInternalServerError, e)
+		return e
+	}
+	defer func() {
+		if ctx.resp.err != nil {
+			ctx.rollback()
+		} else {
+			ctx.commit()
+		}
+	}()
 
 	for _, m := range s.middleware {
 		if e := m(ctx); e != nil {
+			ctx.resp.setError(StatusInternalServerError, e)
 			return e
 		}
 	}
 
-	route, e := s.GetRoute(ctx.req.Method(), path)
-	if e == nil {
-		e := route.execute(s, ctx)
-		if e != nil && ctx.resp.err == nil {
+	if route, e := s.GetRoute(ctx.req.Method(), path); e == nil {
+		if e := route.execute(s, ctx); e != nil {
 			ctx.resp.setError(StatusInternalServerError, e)
+			return e
 		}
-		return e
+		return nil
 	}
 	for _, proxy := range s.proxies {
 		if proxy.match(string(path)) {
-			e := proxy.execute(s, ctx)
-			if e != nil && ctx.resp.err == nil {
+			if e := proxy.execute(s, ctx); e != nil {
 				ctx.resp.setError(StatusInternalServerError, e)
+				return e
 			}
-			return e
+			return nil
 		}
 	}
 	for _, file := range s.files {
@@ -197,8 +208,8 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 			return nil
 		}
 	}
-	ctx.resp.setError(StatusNotFound, e)
-	return e
+	ctx.resp.setError(StatusNotFound, errors.New(`route `+path+` not found`))
+	return ctx.resp.err
 }
 
 //Serve ..

@@ -37,18 +37,6 @@ func (r *Route) AddFuncAction(f func(ctx Context) (interface{}, error), property
 }
 
 func (r *Route) execute(s *Server, ctx *context) error {
-	if e := ctx.begin(); e != nil {
-		ctx.resp.setError(StatusInternalServerError, e)
-		return e
-	}
-	defer func() {
-		if ctx.resp.err != nil {
-			ctx.rollback()
-		} else {
-			ctx.commit()
-		}
-	}()
-
 	if s.routeAuthenticator != nil {
 		for _, m := range s.routeAuthenticator {
 			if r.secure {
