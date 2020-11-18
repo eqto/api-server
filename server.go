@@ -217,6 +217,17 @@ func (s *Server) Serve(port int) error {
 		for _, h := range s.finalHandler {
 			h(ctx)
 		}
+		if ctx.resp.json != nil {
+			ctx.resp.httpResp.Header.Set(`Content-type`, `application/json`)
+			ctx.resp.json.Put(`status.code`, ctx.resp.httpResp.StatusCode())
+			msg := `success`
+			if ctx.resp.err != nil {
+				msg = ctx.resp.err.Error()
+			}
+			ctx.resp.json.Put(`status.message`, msg)
+
+			fastCtx.Write(ctx.resp.json.ToBytes())
+		}
 	}
 	handler = fasthttp.CompressHandlerBrotliLevel(
 		fasthttp.TimeoutHandler(handler, 60*time.Second, `Timeout`),

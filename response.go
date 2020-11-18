@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/eqto/go-json"
 	log "github.com/eqto/go-logger"
 	"github.com/valyala/fasthttp"
 )
@@ -14,6 +15,7 @@ type Response interface {
 type response struct {
 	Response
 	httpResp *fasthttp.Response
+	json     json.Object
 	err      error
 	errFrame []log.Frame
 }

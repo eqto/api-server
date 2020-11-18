@@ -26,7 +26,7 @@ type context struct {
 	resp response
 	sess *session
 
-	jsonResp, vars json.Object
+	vars json.Object
 
 	cn     *db.Connection
 	tx     *db.Tx
@@ -87,10 +87,10 @@ func (c *context) put(property string, value interface{}) {
 		}
 		c.vars.Put(property[1:], value)
 	} else { //save to result
-		if c.jsonResp == nil {
-			c.jsonResp = json.Object{}
+		if c.resp.json == nil {
+			c.resp.json = json.Object{}
 		}
-		c.jsonResp.Put(property, value)
+		c.resp.json.Put(property, value)
 	}
 }
 
@@ -115,6 +115,7 @@ func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *d
 			return nil, errors.Wrap(e, `invalid json body`)
 		}
 		ctx.req.json = req
+		ctx.resp.json = json.Object{}
 	} else {
 		ctx.req.json = json.Object{}
 	}
