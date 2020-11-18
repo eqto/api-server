@@ -11,6 +11,7 @@ import (
 type Request interface {
 	Method() string
 	URL() *url.URL
+	JSON() json.Object
 }
 
 type request struct {
@@ -26,6 +27,10 @@ func (r *request) Method() string {
 
 func (r *request) URL() *url.URL {
 	return r.url
+}
+
+func (r *request) JSON() json.Object {
+	return r.json.Clone()
 }
 
 func (r *request) get(key string) interface{} {
