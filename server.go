@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -125,10 +126,12 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure bool) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
+	name = filepath.Base(name)
 	if strings.Count(name, `.`) > 1 {
+		s.debug(`unsupported add inline function`, name)
 		return nil, errors.New(`unsupported add inline function`)
 	}
-	name = name[strings.IndexRune(name, '.')+1:]
+	name = strings.ReplaceAll(name, `.`, `/`)
 	route := NewRoute()
 	if _, e := route.AddFuncAction(f, `data`); e != nil {
 		return nil, e
@@ -267,6 +270,7 @@ func (s *Server) normalizePath(path string) string {
 	if validPath {
 		path = `/` + path
 	}
+	path = strings.ReplaceAll(path, `/_`, `/`)
 	return path
 }
 
