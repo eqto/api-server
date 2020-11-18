@@ -1,6 +1,8 @@
 package api
 
 import (
+	"errors"
+
 	"github.com/eqto/go-json"
 	log "github.com/eqto/go-logger"
 	"github.com/valyala/fasthttp"
@@ -31,6 +33,9 @@ func (r *response) SetBody(body []byte) {
 func (r *response) setError(status int, e error) {
 	if r.err == nil {
 		r.httpResp.SetStatusCode(status)
+		if e == nil {
+			e = errors.New(``)
+		}
 		r.err = e
 		r.errFrame = log.Stacktrace(2)
 	}
