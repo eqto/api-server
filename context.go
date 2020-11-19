@@ -104,7 +104,7 @@ func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *d
 		sess:   &session{},
 		lockCn: sync.Mutex{},
 	}
-	url, e := url.Parse(string(req.RequestURI()))
+	url, e := url.Parse(string(req.URI().FullURI()))
 	if url == nil {
 		return nil, errors.Wrap(e, `invalid url `+string(req.RequestURI()))
 	}
