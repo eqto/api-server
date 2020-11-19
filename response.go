@@ -12,6 +12,7 @@ import (
 type Response interface {
 	Body() []byte
 	SetBody(body []byte)
+	ContentType() string
 }
 
 type response struct {
@@ -28,6 +29,10 @@ func (r *response) Body() []byte {
 
 func (r *response) SetBody(body []byte) {
 	r.httpResp.SetBody(body)
+}
+
+func (r *response) ContentType() string {
+	return string(r.httpResp.Header.ContentType())
 }
 
 func (r *response) setError(status int, e error) {
