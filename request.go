@@ -12,6 +12,7 @@ type Request interface {
 	Method() string
 	URL() *url.URL
 	JSON() json.Object
+	Header() RequestHeader
 }
 
 type request struct {
@@ -19,6 +20,12 @@ type request struct {
 	httpReq *fasthttp.Request
 	url     *url.URL
 	json    json.Object
+}
+
+func (r *request) Header() RequestHeader {
+	header := RequestHeader{httpHeader: &fasthttp.RequestHeader{}}
+	r.httpReq.Header.CopyTo(header.httpHeader)
+	return header
 }
 
 func (r *request) Method() string {
