@@ -230,12 +230,12 @@ func (s *Server) Serve(port int) error {
 		}
 		if ctx.resp.json != nil {
 			ctx.resp.httpResp.Header.Set(`Content-type`, `application/json`)
-			ctx.resp.json.Put(`status.code`, ctx.resp.httpResp.StatusCode())
+			ctx.resp.json.Put(`status`, ctx.resp.httpResp.StatusCode())
 			msg := `success`
 			if ctx.resp.err != nil {
 				msg = ctx.resp.err.Error()
 			}
-			ctx.resp.json.Put(`status.message`, msg)
+			ctx.resp.json.Put(`message`, msg)
 
 			fastCtx.Write(ctx.resp.json.ToBytes())
 		}
