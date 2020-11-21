@@ -13,6 +13,7 @@ type Response interface {
 	Body() []byte
 	SetBody(body []byte)
 	ContentType() string
+	SetStatus(status int)
 }
 
 type response struct {
@@ -32,16 +33,20 @@ func (r *response) SetBody(body []byte) {
 	r.json = nil
 }
 
+func (r *response) ContentType() string {
+	return string(r.httpResp.Header.ContentType())
+}
+
+func (r *response) SetStatus(status int) {
+	r.httpResp.SetStatusCode(status)
+}
+
 func (r *response) mustJSON() *json.Object {
 	if r.json == nil {
 		r.json = json.Object{}
 	}
 	r.httpResp.ResetBody()
 	return &r.json
-}
-
-func (r *response) ContentType() string {
-	return string(r.httpResp.Header.ContentType())
 }
 
 func (r *response) setError(status int, e error) {

@@ -18,6 +18,7 @@ type Context interface {
 	Request() Request
 	Response() Response
 	Tx() *db.Tx
+	SetStatus(status int)
 }
 
 type context struct {
@@ -47,6 +48,10 @@ func (c *context) Request() Request {
 
 func (c *context) Response() Response {
 	return &c.resp
+}
+
+func (c *context) SetStatus(status int) {
+	c.resp.SetStatus(status)
 }
 
 func (c *context) Tx() *db.Tx {
