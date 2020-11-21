@@ -79,9 +79,6 @@ func (s *Server) AddRouteAuthenticator(a RouteAuthenticator) {
 
 //Proxy ...
 func (s *Server) Proxy(path, dest string) error {
-	if strings.HasPrefix(dest, `http://`) {
-		dest = dest[7:]
-	}
 	p, e := newProxy(path, dest)
 	if e != nil {
 		return e
