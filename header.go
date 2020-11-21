@@ -16,3 +16,18 @@ func (r *RequestHeader) Get(key string) string {
 	}
 	return ``
 }
+
+//ResponseHeader ...
+type ResponseHeader struct {
+	httpHeader *fasthttp.ResponseHeader
+}
+
+//Add ..
+func (r *ResponseHeader) Add(key, value string) {
+	r.httpHeader.Add(key, value)
+}
+
+//Set ..
+func (r *ResponseHeader) Set(key, value string) {
+	r.httpHeader.Set(key, value)
+}
