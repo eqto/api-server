@@ -29,6 +29,15 @@ func (r *response) Body() []byte {
 
 func (r *response) SetBody(body []byte) {
 	r.httpResp.SetBody(body)
+	r.json = nil
+}
+
+func (r *response) mustJSON() *json.Object {
+	if r.json == nil {
+		r.json = json.Object{}
+	}
+	r.httpResp.ResetBody()
+	return &r.json
 }
 
 func (r *response) ContentType() string {

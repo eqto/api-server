@@ -88,10 +88,7 @@ func (c *context) put(property string, value interface{}) {
 		}
 		c.vars.Put(property[1:], value)
 	} else { //save to result
-		if c.resp.json == nil {
-			c.resp.json = json.Object{}
-		}
-		c.resp.json.Put(property, value)
+		c.resp.mustJSON().Put(property, value)
 	}
 }
 
@@ -120,7 +117,6 @@ func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *d
 			return nil, errors.Wrap(e, `invalid json body`)
 		}
 		ctx.req.json = req
-		ctx.resp.json = json.Object{}
 	} else {
 		ctx.req.json = json.Object{}
 	}
