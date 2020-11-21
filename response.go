@@ -10,7 +10,7 @@ import (
 
 //Response ..
 type Response interface {
-	Header() ResponseHeader
+	Header() *ResponseHeader
 	Body() []byte
 	SetBody(body []byte)
 	ContentType() string
@@ -25,8 +25,8 @@ type response struct {
 	errFrame []log.Frame
 }
 
-func (r *response) Header() ResponseHeader {
-	return ResponseHeader{&r.httpResp.Header}
+func (r *response) Header() *ResponseHeader {
+	return &ResponseHeader{&r.httpResp.Header}
 }
 
 func (r *response) Body() []byte {
