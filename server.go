@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/eqto/go-db"
+	"github.com/eqto/go-json"
 	log "github.com/eqto/go-logger"
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
@@ -188,6 +189,7 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 
 	if route, e := s.GetRoute(ctx.req.Method(), path); e == nil {
 		if e := route.execute(s, ctx); e != nil {
+			ctx.resp.json = json.Object{}
 			ctx.resp.setError(StatusInternalServerError, e)
 			return e
 		}
@@ -221,9 +223,7 @@ func (s *Server) Serve(port int) error {
 			fastCtx.WriteString(e.Error())
 			return
 		}
-		if e := s.execute(fastCtx, ctx); e != nil {
-			s.logW(e)
-		}
+		s.execute(fastCtx, ctx)
 
 		for _, h := range s.finalHandler {
 			h(ctx)

@@ -55,6 +55,7 @@ func (r *Route) execute(s *Server, ctx *context) error {
 			}
 		} else {
 			ctx.resp.setError(StatusInternalServerError, e)
+			return e
 		}
 	}
 	return nil
