@@ -31,7 +31,7 @@ type Server struct {
 	cn                 *db.Connection
 	dbConnected        bool
 	routeAuthenticator []RouteAuthenticator
-	middleware         []Middleware
+	middleware         []middlewareContainer
 	finalHandler       []func(ctx Context)
 
 	logD func(v ...interface{})
@@ -65,8 +65,13 @@ func (s *Server) SetDatabase(host string, port int, username, password, name str
 }
 
 //AddMiddleware ..
-func (s *Server) AddMiddleware(m Middleware) {
-	s.middleware = append(s.middleware, m)
+func (s *Server) AddMiddleware(f func(Context) error) {
+	s.middleware = append(s.middleware, middlewareContainer{f: f})
+}
+
+//AddSecureMiddleware ..
+func (s *Server) AddSecureMiddleware(f func(Context) error) {
+	s.middleware = append(s.middleware, middlewareContainer{f: f, secure: true})
 }
 
 //AddFinalHandler ..
@@ -181,14 +186,16 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 		}
 	}()
 
-	for _, m := range s.middleware {
-		if e := m(ctx); e != nil {
-			ctx.resp.setError(StatusInternalServerError, e)
-			return e
-		}
-	}
-
 	if route, e := s.GetRoute(ctx.req.Method(), path); e == nil {
+		for _, m := range s.middleware {
+			if !m.secure || (m.secure && route.secure) {
+				if e := m.f(ctx); e != nil {
+					ctx.resp.setError(StatusInternalServerError, e)
+					return e
+				}
+			}
+		}
+
 		if e := route.execute(s, ctx); e != nil {
 			ctx.resp.json = json.Object{}
 			ctx.resp.setError(StatusInternalServerError, e)
