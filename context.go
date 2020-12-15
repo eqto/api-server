@@ -19,6 +19,8 @@ type Context interface {
 	Response() Response
 	Tx() *db.Tx
 	SetStatus(status int)
+	SetValue(name string, value interface{})
+	GetValue(name string) interface{}
 }
 
 type context struct {
@@ -34,7 +36,8 @@ type context struct {
 	tx     *db.Tx
 	lockCn sync.Mutex
 
-	next bool
+	next   bool
+	values map[string]interface{}
 }
 
 //Session ..
@@ -48,6 +51,13 @@ func (c *context) Request() Request {
 
 func (c *context) Response() Response {
 	return &c.resp
+}
+
+func (c *context) SetValue(name string, value interface{}) {
+	c.values[name] = value
+}
+func (c *context) GetValue(name string) interface{} {
+	return c.values[name]
 }
 
 func (c *context) SetStatus(status int) {
@@ -103,6 +113,7 @@ func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *d
 		req:    request{httpReq: req},
 		resp:   response{httpResp: resp},
 		cn:     cn,
+		values: make(map[string]interface{}),
 		sess:   &session{},
 		lockCn: sync.Mutex{},
 	}
