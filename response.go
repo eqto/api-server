@@ -14,7 +14,9 @@ type Response interface {
 	Body() []byte
 	SetBody(body []byte)
 	ContentType() string
-	SetStatus(status int, message string)
+	SetStatus(status int, msg string)
+	SetStatusCode(status int)
+	SetStatusMessage(msg string)
 }
 
 type response struct {
@@ -44,9 +46,17 @@ func (r *response) ContentType() string {
 	return string(r.httpResp.Header.ContentType())
 }
 
-func (r *response) SetStatus(status int, message string) {
+func (r *response) SetStatus(status int, msg string) {
+	r.SetStatusCode(status)
+	r.SetStatusMessage(msg)
+}
+
+func (r *response) SetStatusCode(status int) {
 	r.status = status
-	r.message = message
+}
+
+func (r *response) SetStatusMessage(msg string) {
+	r.message = msg
 }
 
 func (r *response) getStatus() int {
