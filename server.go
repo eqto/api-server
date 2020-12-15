@@ -191,6 +191,7 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 		for _, m := range s.middleware {
 			if !m.secure || (m.secure && route.secure) {
 				if e := m.f(ctx); e != nil {
+					ctx.resp.json = json.Object{}
 					ctx.resp.setError(StatusInternalServerError, e)
 					return e
 				}
