@@ -18,7 +18,6 @@ type Context interface {
 	Request() Request
 	Response() Response
 	Tx() *db.Tx
-	SetStatus(status int)
 	SetValue(name string, value interface{})
 	GetValue(name string) interface{}
 }
@@ -99,7 +98,7 @@ func (c *context) put(property string, value interface{}) {
 		}
 		c.vars.Put(property[1:], value)
 	} else { //save to result
-		c.resp.mustJSON().Put(property, value)
+		c.resp.JSON().Put(property, value)
 	}
 }
 

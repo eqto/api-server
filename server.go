@@ -243,14 +243,8 @@ func (s *Server) Serve(port int) error {
 		}
 		if ctx.resp.json != nil {
 			ctx.resp.httpResp.Header.Set(`Content-type`, `application/json`)
-			if !ctx.resp.json.Has(`status`) {
-				ctx.resp.json.Put(`status`, ctx.resp.httpResp.StatusCode())
-				msg := `success`
-				if ctx.resp.err != nil {
-					msg = ctx.resp.err.Error()
-				}
-				ctx.resp.json.Put(`message`, msg)
-			}
+			ctx.resp.json.Put(`status`, ctx.resp.getStatus())
+			ctx.resp.json.Put(`message`, ctx.resp.getMessage())
 
 			fastCtx.Write(ctx.resp.json.ToBytes())
 		}

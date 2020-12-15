@@ -23,6 +23,8 @@ type response struct {
 	json     json.Object
 	err      error
 	errFrame []log.Frame
+	status   int
+	message  string
 }
 
 func (r *response) Header() *ResponseHeader {
@@ -43,14 +45,28 @@ func (r *response) ContentType() string {
 }
 
 func (r *response) SetStatus(status int, message string) {
-	if r.json == nil {
-		r.json = json.Object{}
-	}
-	r.json.Put(`status`, status)
-	r.json.Put(`message`, message)
+	r.status = status
+	r.message = message
 }
 
-func (r *response) mustJSON() *json.Object {
+func (r *response) getStatus() int {
+	if r.err != nil {
+		return 99
+	}
+	return r.status
+}
+
+func (r *response) getMessage() string {
+	if r.message != `` {
+		return r.message
+	}
+	if r.err != nil {
+		return r.err.Error()
+	}
+	return ``
+}
+
+func (r *response) JSON() *json.Object {
 	if r.json == nil {
 		r.json = json.Object{}
 	}
