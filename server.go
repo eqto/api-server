@@ -18,7 +18,8 @@ import (
 
 //Server ...
 type Server struct {
-	fast     *fasthttp.Server
+	serv *fasthttp.Server
+
 	routeMap map[string]map[string]*Route
 	proxies  []proxy
 	files    []file
@@ -250,25 +251,33 @@ func (s *Server) Serve(port int) error {
 			fastCtx.Write(ctx.resp.json.ToBytes())
 		}
 	}
-	if s.fast != nil {
-		s.Shutdown()
+	if s.serv != nil {
+		if e := s.Shutdown(); e != nil {
+			return e
+		}
 	}
-	s.fast = &fasthttp.Server{Handler: fasthttp.CompressHandlerBrotliLevel(
+	s.serv = &fasthttp.Server{Handler: fasthttp.CompressHandlerBrotliLevel(
 		fasthttp.TimeoutHandler(handler, 60*time.Second, `Timeout`),
 		fasthttp.CompressBrotliDefaultCompression,
 		fasthttp.CompressDefaultCompression,
-	)}
-	return s.fast.ListenAndServe(fmt.Sprintf(`:%d`, port))
+	),
+		DisableHeaderNamesNormalizing: true,
+		ReadTimeout:                   5 * time.Second,
+		WriteTimeout:                  10 * time.Second,
+		MaxKeepaliveDuration:          10 * time.Second,
+	}
+	return s.serv.ListenAndServe(fmt.Sprintf(`:%d`, port))
 }
 
 //Shutdown ..
 func (s *Server) Shutdown() error {
-	if s.fast != nil {
-		if e := s.fast.Shutdown(); e != nil {
+	if s.serv != nil {
+		s.serv.DisableKeepalive = true
+		if e := s.serv.Shutdown(); e != nil {
 			return e
 		}
 	}
-	s.fast = nil
+	s.serv = nil
 	return nil
 }
 
