@@ -60,10 +60,6 @@ func (c *context) GetValue(name string) interface{} {
 	return c.values[name]
 }
 
-func (c *context) SetStatus(status int) {
-	c.resp.SetStatus(status)
-}
-
 func (c *context) Tx() *db.Tx {
 	return c.tx
 }

@@ -42,8 +42,12 @@ func (r *response) ContentType() string {
 	return string(r.httpResp.Header.ContentType())
 }
 
-func (r *response) SetStatus(status int) {
-	r.httpResp.SetStatusCode(status)
+func (r *response) SetStatus(status int, message string) {
+	if r.json == nil {
+		r.json = json.Object{}
+	}
+	r.json.Put(`status`, status)
+	r.json.Put(`message`, message)
 }
 
 func (r *response) mustJSON() *json.Object {
