@@ -149,6 +149,18 @@ func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure b
 	return route, nil
 }
 
+//AddPostRoute ..
+func (s *Server) AddPostRoute(path string, f func(ctx Context) (interface{}, error), secure bool) (*Route, error) {
+	route := NewRoute()
+	route.secure = secure
+	_, e := route.AddFuncAction(f, `data`)
+	if e != nil {
+		return nil, e
+	}
+	s.SetRoute(MethodPost, path, route)
+	return route, nil
+}
+
 //AddQueryRoute add route with single query action. When secure is true, this route will validated using auth middlewares if any.
 func (s *Server) AddQueryRoute(path, query, params string, secure bool) (*Route, error) {
 	route := NewRoute()
