@@ -14,7 +14,7 @@ type Response interface {
 	Body() []byte
 	SetBody(body []byte)
 	ContentType() string
-	SetStatus(status int)
+	SetStatus(status int, message string)
 }
 
 type response struct {
