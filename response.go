@@ -51,7 +51,13 @@ func (r *response) SetStatus(status int, message string) {
 
 func (r *response) getStatus() int {
 	if r.err != nil {
-		return 99
+		if r.status > 0 {
+			return r.status
+		} else if code := r.httpResp.StatusCode(); code != 200 {
+			return code
+		} else {
+			return 999
+		}
 	}
 	return r.status
 }
