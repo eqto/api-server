@@ -141,6 +141,7 @@ func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure b
 	}
 	name = strings.ReplaceAll(name, `.`, `/`)
 	route := NewRoute()
+	route.secure = false
 	if _, e := route.AddFuncAction(f, `data`); e != nil {
 		return nil, e
 	}
