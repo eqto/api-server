@@ -44,5 +44,9 @@ func (r *request) get(key string) interface{} {
 	if r.json.Has(key) {
 		return r.json.Get(key)
 	}
-	return r.url.Query().Get(key)
+	query := r.url.Query()
+	if _, ok := query[key]; ok {
+		return query.Get(key)
+	}
+	return nil
 }
