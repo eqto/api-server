@@ -12,6 +12,7 @@ type Request interface {
 	Method() string
 	URL() *url.URL
 	JSON() json.Object
+	Body() []byte
 	Header() *RequestHeader
 }
 
@@ -19,7 +20,8 @@ type request struct {
 	Request
 	httpReq *fasthttp.Request
 	url     *url.URL
-	json    json.Object
+	body    []byte
+	js      json.Object
 }
 
 func (r *request) Header() *RequestHeader {
@@ -37,12 +39,26 @@ func (r *request) URL() *url.URL {
 }
 
 func (r *request) JSON() json.Object {
-	return r.json.Clone()
+	if r.js == nil {
+		if r.body != nil {
+			if js, e := json.Parse(r.body); e == nil {
+				r.js = js
+			}
+		}
+	}
+	if r.js == nil {
+		r.js = json.Object{}
+	}
+	return r.js.Clone()
+}
+
+func (r *request) Body() []byte {
+	return r.body
 }
 
 func (r *request) get(key string) interface{} {
-	if r.json.Has(key) {
-		return r.json.Get(key)
+	if r.js.Has(key) {
+		return r.js.Get(key)
 	}
 	query := r.url.Query()
 	if _, ok := query[key]; ok {

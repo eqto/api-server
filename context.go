@@ -1,7 +1,6 @@
 package api
 
 import (
-	"bytes"
 	"net/url"
 	"strings"
 	"sync"
@@ -117,19 +116,7 @@ func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *d
 		return nil, errors.Wrap(e, `invalid url `+string(req.RequestURI()))
 	}
 	ctx.req.url = url
+	ctx.req.body = req.Body()
 
-	if bytes.HasPrefix(req.Header.ContentType(), []byte(`application/json`)) {
-		body := req.Body()
-		if len(body) == 0 {
-			body = []byte(`{}`)
-		}
-		req, e := json.Parse(body)
-		if e != nil {
-			return nil, errors.Wrap(e, `invalid json body`)
-		}
-		ctx.req.json = req
-	} else {
-		ctx.req.json = json.Object{}
-	}
 	return ctx, nil
 }
