@@ -17,6 +17,15 @@ func (r *RequestHeader) Get(key string) string {
 	return ``
 }
 
+//GetOrNil ..
+func (r *RequestHeader) GetOrNil(key string) *string {
+	if val := r.httpHeader.Peek(key); val != nil {
+		str := string(val)
+		return &str
+	}
+	return nil
+}
+
 //ResponseHeader ...
 type ResponseHeader struct {
 	httpHeader *fasthttp.ResponseHeader
