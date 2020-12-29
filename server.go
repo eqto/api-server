@@ -205,7 +205,11 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 			if !m.secure || (m.secure && route.secure) {
 				if e := m.f(ctx); e != nil {
 					ctx.resp.json = json.Object{}
-					ctx.resp.setError(StatusInternalServerError, e)
+					if m.secure {
+						ctx.resp.setError(StatusUnauthorized, e)
+					} else {
+						ctx.resp.setError(StatusInternalServerError, e)
+					}
 					return e
 				}
 			}
