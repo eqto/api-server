@@ -57,8 +57,9 @@ func (r *request) Body() []byte {
 }
 
 func (r *request) get(key string) interface{} {
-	if r.js.Has(key) {
-		return r.js.Get(key)
+	js := r.JSON()
+	if js.Has(key) {
+		return js.Get(key)
 	}
 	query := r.url.Query()
 	if _, ok := query[key]; ok {
