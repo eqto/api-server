@@ -21,7 +21,7 @@ const (
 
 var (
 	errMissingParameter = errors.New(`error missing required parameter: %s`)
-	errExecutingQuery   = errors.New(`error executing query: %s`)
+	errExecutingQuery   = errors.New(`error executing query`)
 )
 
 type actionQuery struct {
@@ -163,8 +163,14 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		data, err = ctx.tx.Exec(q.rawQuery, values...)
 	}
 	if err != nil {
+		if err, ok := err.(db.SQLError); ok {
+			switch err.Kind() {
+			case db.ErrDuplicate:
+				return nil, errors.New(`Duplicate entry`)
+			}
+		}
 		ctx.s.logE(err)
-		return nil, fmt.Errorf(errExecutingQuery.Error(), q.rawQuery)
+		return nil, errExecutingQuery
 	}
 	return data, nil
 }
