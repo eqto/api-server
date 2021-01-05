@@ -172,6 +172,18 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		ctx.s.logE(err)
 		return nil, errExecutingQuery
 	}
+	switch q.qType {
+	case queryTypeInsert:
+		if id, e := data.(*db.Result).LastInsertID(); e == nil {
+			data = id
+		}
+	case queryTypeUpdate:
+		fallthrough
+	case queryTypeDelete:
+		if rows, e := data.(*db.Result).RowsAffected(); e == nil {
+			data = rows
+		}
+	}
 	return data, nil
 }
 
