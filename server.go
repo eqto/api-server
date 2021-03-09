@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
-	"regexp"
 	"runtime"
 	"strings"
 	"time"
@@ -121,7 +120,7 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 		s.routeMap[MethodPost] = make(map[string]*Route)
 	}
 	if s.normalize {
-		path = s.normalizePath(path)
+		path = normalizePath(path)
 	}
 	s.routeMap[method][path] = route
 	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
@@ -335,25 +334,6 @@ func (s *Server) routeMethod(method, path string) (int8, error) {
 	default:
 		return 0, fmt.Errorf(`unrecognized method %s, choose between api.MethodGet or api.MethodPost`, method)
 	}
-}
-
-func (s *Server) normalizePath(path string) string {
-	regex := regexp.MustCompile(`([A-Z]+)`)
-	path = regex.ReplaceAllString(path, `_$1`)
-	path = strings.ToLower(path)
-	validPath := false
-	if strings.HasPrefix(path, `/`) {
-		validPath = true
-		path = path[1:]
-	}
-	if strings.HasPrefix(path, `_`) {
-		path = path[1:]
-	}
-	if validPath {
-		path = `/` + path
-	}
-	path = strings.ReplaceAll(path, `/_`, `/`)
-	return path
 }
 
 func (s *Server) debug(v ...interface{}) {
