@@ -75,6 +75,11 @@ func (s *Server) AddSecureMiddleware(f func(Context) error) {
 	s.middleware = append(s.middleware, middlewareContainer{f: f, secure: true})
 }
 
+//AddNamedMiddleware ..
+func (s *Server) AddNamedMiddleware(name string, f func(Context) error) {
+	s.middleware = append(s.middleware, middlewareContainer{name: name, f: f})
+}
+
 //AddFinalHandler ..
 func (s *Server) AddFinalHandler(f func(ctx Context)) {
 	s.finalHandler = append(s.finalHandler, f)
@@ -196,15 +201,17 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 
 	if route, e := s.GetRoute(ctx.req.Method(), path); e == nil {
 		for _, m := range s.middleware {
-			if !m.secure || (m.secure && route.secure) {
-				if e := m.f(ctx); e != nil {
-					ctx.resp.json = json.Object{}
-					if m.secure {
-						ctx.resp.setError(StatusUnauthorized, e)
-					} else {
-						ctx.resp.setError(StatusInternalServerError, e)
+			if m.name == `` || m.name == route.middlewareName {
+				if !m.secure || (m.secure && route.secure) {
+					if e := m.f(ctx); e != nil {
+						ctx.resp.json = json.Object{}
+						if m.secure {
+							ctx.resp.setError(StatusUnauthorized, e)
+						} else {
+							ctx.resp.setError(StatusInternalServerError, e)
+						}
+						return e
 					}
-					return e
 				}
 			}
 		}

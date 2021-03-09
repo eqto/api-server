@@ -7,13 +7,19 @@ const (
 
 //Route ...
 type Route struct {
-	action []Action
-	secure bool
+	action         []Action
+	secure         bool
+	middlewareName string
 }
 
 //SetSecure ...
 func (r *Route) SetSecure(secure bool) {
 	r.secure = secure
+}
+
+//Use only use middleware that have the same name
+func (r *Route) Use(name string) {
+	r.middlewareName = name
 }
 
 //AddQueryAction ...

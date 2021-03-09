@@ -7,4 +7,5 @@ type RouteAuthenticator func(ctx Context) error
 type middlewareContainer struct {
 	f      func(ctx Context) error
 	secure bool
+	name   string
 }
