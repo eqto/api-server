@@ -12,14 +12,16 @@ type Route struct {
 	middlewareName string
 }
 
-//SetSecure ...
-func (r *Route) SetSecure(secure bool) {
-	r.secure = secure
+//Secure ...
+func (r *Route) Secure() *Route {
+	r.secure = true
+	return r
 }
 
-//Use only use middleware that have the same name
-func (r *Route) Use(name string) {
+//Use only use middleware that have the same name or no name
+func (r *Route) Use(name string) *Route {
 	r.middlewareName = name
+	return r
 }
 
 //AddQueryAction ...
