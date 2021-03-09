@@ -27,13 +27,10 @@ func (r *Route) AddQueryAction(query, params, property string) (Action, error) {
 }
 
 //AddFuncAction ...
-func (r *Route) AddFuncAction(f func(ctx Context) (interface{}, error), property string) (Action, error) {
-	act, e := newFuncAction(f, property)
-	if e != nil {
-		return nil, e
-	}
+func (r *Route) AddFuncAction(f func(ctx Context) (interface{}, error), property string) Action {
+	act := newFuncAction(f, property)
 	r.action = append(r.action, act)
-	return act, nil
+	return act
 }
 
 func (r *Route) execute(s *Server, ctx *context) error {

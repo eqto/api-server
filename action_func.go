@@ -21,6 +21,6 @@ func (f *actionFunc) params() []string {
 	return nil
 }
 
-func newFuncAction(f func(ctx Context) (interface{}, error), property string) (*actionFunc, error) {
-	return &actionFunc{f: f, prop: property}, nil
+func newFuncAction(f func(ctx Context) (interface{}, error), property string) *actionFunc {
+	return &actionFunc{f: f, prop: property}
 }
