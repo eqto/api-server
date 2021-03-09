@@ -18,7 +18,7 @@ func (r *Route) Secure() *Route {
 	return r
 }
 
-//Use only use middleware that have the same name or no name
+//UseGroup only use middleware that have the same name or no name
 func (r *Route) UseGroup(name string) *Route {
 	r.middlewareName = name
 	return r
