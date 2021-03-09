@@ -15,7 +15,7 @@ type Group struct {
 }
 
 func (g *Group) newRoute() *Route {
-	return new(Route).Use(g.name)
+	return new(Route).UseGroup(g.name)
 }
 
 //Post ..

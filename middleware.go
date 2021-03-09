@@ -3,7 +3,7 @@ package api
 //Middleware ..
 type Middleware interface {
 	//For set name for this middleware, this middleware only used by route that requiring the same name
-	For(string) Middleware
+	ForGroup(string) Middleware
 	Secure() Middleware
 }
 
@@ -18,7 +18,7 @@ type middlewareContainer struct {
 	name   string
 }
 
-func (m *middlewareContainer) For(name string) Middleware {
+func (m *middlewareContainer) ForGroup(name string) Middleware {
 	m.name = name
 	return m
 }
