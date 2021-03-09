@@ -66,18 +66,10 @@ func (s *Server) SetDatabase(driver, host string, port int, username, password, 
 }
 
 //AddMiddleware ..
-func (s *Server) AddMiddleware(f func(Context) error) {
-	s.middleware = append(s.middleware, middlewareContainer{f: f})
-}
-
-//AddSecureMiddleware ..
-func (s *Server) AddSecureMiddleware(f func(Context) error) {
-	s.middleware = append(s.middleware, middlewareContainer{f: f, secure: true})
-}
-
-//AddNamedMiddleware ..
-func (s *Server) AddNamedMiddleware(name string, f func(Context) error) {
-	s.middleware = append(s.middleware, middlewareContainer{name: name, f: f})
+func (s *Server) AddMiddleware(f func(Context) error) Middleware {
+	m := middlewareContainer{f: f}
+	s.middleware = append(s.middleware, m)
+	return &m
 }
 
 //AddFinalHandler ..
