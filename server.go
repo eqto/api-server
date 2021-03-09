@@ -2,9 +2,6 @@ package api
 
 import (
 	"fmt"
-	"path/filepath"
-	"reflect"
-	"runtime"
 	"strings"
 	"time"
 
@@ -37,6 +34,8 @@ type Server struct {
 	logD func(v ...interface{})
 	logW func(v ...interface{})
 	logE func(v ...interface{})
+
+	stdGroup *Group
 }
 
 //Database ...
@@ -66,9 +65,7 @@ func (s *Server) SetDatabase(driver, host string, port int, username, password, 
 
 //AddMiddleware ..
 func (s *Server) AddMiddleware(f func(Context) error) Middleware {
-	m := middlewareContainer{f: f}
-	s.middleware = append(s.middleware, m)
-	return &m
+	s.defGroup().AddMiddleware(f)
 }
 
 //AddFinalHandler ..
@@ -128,59 +125,32 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 
 //Func add route with single func action. When secure is true, this route will validated using auth middlewares if any.
 func (s *Server) Func(f func(Context) (interface{}, error)) (*Route, error) {
-	ptr := reflect.ValueOf(f).Pointer()
-	name := runtime.FuncForPC(ptr).Name()
-	name = filepath.Base(name)
-	if strings.Count(name, `.`) > 1 {
-		s.debug(`unsupported add inline function`, name)
-		return nil, errors.New(`unsupported add inline function`)
-	}
-	name = strings.ReplaceAll(name, `.`, `/`)
-	route := NewRoute()
-	route.AddFuncAction(f, `data`)
-	s.SetRoute(MethodPost, `/`+name, route)
-	return route, nil
+	return s.defGroup().Func(f)
 }
 
 //FuncSecure ..
 func (s *Server) FuncSecure(f func(Context) (interface{}, error)) (*Route, error) {
-	route, e := s.Func(f)
-	if e != nil {
-		return nil, e
-	}
-	return route.Secure(), nil
+	return s.defGroup().FuncSecure(f)
 }
 
 //Post ..
 func (s *Server) Post(path string, f func(Context) (interface{}, error)) *Route {
-	route := NewRoute()
-	route.AddFuncAction(f, `data`)
-	s.SetRoute(MethodPost, path, route)
-	return route
+	return s.defGroup().Post(path, f)
 }
 
 //PostSecure ..
 func (s *Server) PostSecure(path string, f func(Context) (interface{}, error)) *Route {
-	return s.Post(path, f).Secure()
+	return s.defGroup().PostSecure(path, f)
 }
 
 //Query add route with single query action. When secure is true, this route will validated using auth middlewares if any.
 func (s *Server) Query(path, query, params string) (*Route, error) {
-	route := NewRoute()
-	if _, e := route.AddQueryAction(query, params, `data`); e != nil {
-		return nil, e
-	}
-	s.SetRoute(MethodPost, path, route)
-	return route, nil
+	return s.defGroup().Query(path, query, params)
 }
 
 //QuerySecure ..
 func (s *Server) QuerySecure(path, query, params string) (*Route, error) {
-	route, e := s.Query(path, query, params)
-	if e != nil {
-		return nil, e
-	}
-	return route.Secure(), nil
+	return s.defGroup().QuerySecure(path, query, params)
 }
 
 //GetRoute ...
@@ -323,6 +293,18 @@ func (s *Server) SetLogger(debug func(...interface{}), warn func(...interface{})
 	s.logD = debug
 	s.logW = warn
 	s.logE = err
+}
+
+//Group ..
+func (s *Server) Group(name string) *Group {
+	return &Group{s: s, name: name}
+}
+
+func (s *Server) defGroup() *Group {
+	if s.stdGroup == nil {
+		s.stdGroup = s.Group(``)
+	}
+	return s.stdGroup
 }
 
 func (s *Server) routeMethod(method, path string) (int8, error) {

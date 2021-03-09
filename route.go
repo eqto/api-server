@@ -65,15 +65,3 @@ func (r *Route) execute(s *Server, ctx *context) error {
 	}
 	return nil
 }
-
-//NewRoute create route
-func NewRoute() *Route {
-	return &Route{secure: true}
-}
-
-//NewFuncRoute create POST route with single func action
-func NewFuncRoute(f func(Context) (interface{}, error)) *Route {
-	route := NewRoute()
-	route.AddFuncAction(f, `data`)
-	return route
-}
