@@ -145,9 +145,8 @@ func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure b
 }
 
 //AddPostRoute ..
-func (s *Server) AddPostRoute(path string, f func(ctx Context) (interface{}, error), secure bool) *Route {
+func (s *Server) AddPostRoute(path string, f func(ctx Context) (interface{}, error)) *Route {
 	route := NewRoute()
-	route.secure = secure
 	route.AddFuncAction(f, `data`)
 	s.SetRoute(MethodPost, path, route)
 	return route
