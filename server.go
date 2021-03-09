@@ -65,7 +65,7 @@ func (s *Server) SetDatabase(driver, host string, port int, username, password, 
 
 //AddMiddleware ..
 func (s *Server) AddMiddleware(f func(Context) error) Middleware {
-	s.defGroup().AddMiddleware(f)
+	return s.defGroup().AddMiddleware(f)
 }
 
 //AddFinalHandler ..
