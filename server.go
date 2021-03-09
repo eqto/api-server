@@ -73,7 +73,7 @@ func (s *Server) AddMiddleware(f func(Context) error) Middleware {
 }
 
 //AddFinalHandler ..
-func (s *Server) AddFinalHandler(f func(ctx Context)) {
+func (s *Server) AddFinalHandler(f func(Context)) {
 	s.finalHandler = append(s.finalHandler, f)
 }
 
@@ -127,8 +127,8 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
 }
 
-//AddFuncRoute add route with single func action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure bool) (*Route, error) {
+//Func add route with single func action. When secure is true, this route will validated using auth middlewares if any.
+func (s *Server) Func(f func(Context) (interface{}, error)) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
 	name = filepath.Base(name)
@@ -138,28 +138,50 @@ func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure b
 	}
 	name = strings.ReplaceAll(name, `.`, `/`)
 	route := NewRoute()
-	route.secure = secure
 	route.AddFuncAction(f, `data`)
 	s.SetRoute(MethodPost, `/`+name, route)
 	return route, nil
 }
 
-//AddPostRoute ..
-func (s *Server) AddPostRoute(path string, f func(ctx Context) (interface{}, error)) *Route {
+//FuncSecure ..
+func (s *Server) FuncSecure(f func(Context) (interface{}, error)) (*Route, error) {
+	route, e := s.Func(f)
+	if e != nil {
+		return nil, e
+	}
+	return route.Secure(), nil
+}
+
+//Post ..
+func (s *Server) Post(path string, f func(Context) (interface{}, error)) *Route {
 	route := NewRoute()
 	route.AddFuncAction(f, `data`)
 	s.SetRoute(MethodPost, path, route)
 	return route
 }
 
-//AddQueryRoute add route with single query action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) AddQueryRoute(path, query, params string, secure bool) (*Route, error) {
+//PostSecure ..
+func (s *Server) PostSecure(path string, f func(Context) (interface{}, error)) *Route {
+	return s.Post(path, f).Secure()
+}
+
+//Query add route with single query action. When secure is true, this route will validated using auth middlewares if any.
+func (s *Server) Query(path, query, params string) (*Route, error) {
 	route := NewRoute()
 	if _, e := route.AddQueryAction(query, params, `data`); e != nil {
 		return nil, e
 	}
 	s.SetRoute(MethodPost, path, route)
 	return route, nil
+}
+
+//QuerySecure ..
+func (s *Server) QuerySecure(path, query, params string) (*Route, error) {
+	route, e := s.Query(path, query, params)
+	if e != nil {
+		return nil, e
+	}
+	return route.Secure(), nil
 }
 
 //GetRoute ...
@@ -298,7 +320,7 @@ func (s *Server) SetDebug() {
 }
 
 //SetLogger ...
-func (s *Server) SetLogger(debug func(v ...interface{}), warn func(v ...interface{}), err func(v ...interface{})) {
+func (s *Server) SetLogger(debug func(...interface{}), warn func(...interface{}), err func(...interface{})) {
 	s.logD = debug
 	s.logW = warn
 	s.logE = err

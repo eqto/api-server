@@ -5,7 +5,7 @@ import "errors"
 type actionFunc struct {
 	Action
 	prop string
-	f    func(ctx Context) (interface{}, error)
+	f    func(Context) (interface{}, error)
 }
 
 func (f *actionFunc) execute(ctx *context) (interface{}, error) {
@@ -21,6 +21,6 @@ func (f *actionFunc) params() []string {
 	return nil
 }
 
-func newFuncAction(f func(ctx Context) (interface{}, error), property string) *actionFunc {
+func newFuncAction(f func(Context) (interface{}, error), property string) *actionFunc {
 	return &actionFunc{f: f, prop: property}
 }

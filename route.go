@@ -35,7 +35,7 @@ func (r *Route) AddQueryAction(query, params, property string) (Action, error) {
 }
 
 //AddFuncAction ...
-func (r *Route) AddFuncAction(f func(ctx Context) (interface{}, error), property string) Action {
+func (r *Route) AddFuncAction(f func(Context) (interface{}, error), property string) Action {
 	act := newFuncAction(f, property)
 	r.action = append(r.action, act)
 	return act
@@ -72,7 +72,7 @@ func NewRoute() *Route {
 }
 
 //NewFuncRoute create POST route with single func action
-func NewFuncRoute(f func(ctx Context) (interface{}, error)) *Route {
+func NewFuncRoute(f func(Context) (interface{}, error)) *Route {
 	route := NewRoute()
 	route.AddFuncAction(f, `data`)
 	return route
