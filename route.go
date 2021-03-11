@@ -7,9 +7,9 @@ const (
 
 //Route ...
 type Route struct {
-	action         []Action
-	secure         bool
-	middlewareName string
+	action []Action
+	secure bool
+	group  string
 }
 
 //Secure ...
@@ -20,7 +20,7 @@ func (r *Route) Secure() *Route {
 
 //UseGroup only use middleware that have the same name or no name
 func (r *Route) UseGroup(name string) *Route {
-	r.middlewareName = name
+	r.group = name
 	return r
 }
 

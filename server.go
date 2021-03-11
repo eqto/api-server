@@ -28,7 +28,7 @@ type Server struct {
 	cn                 *db.Connection
 	dbConnected        bool
 	routeAuthenticator []RouteAuthenticator
-	middleware         []middlewareContainer
+	middlewares        []*middlewareContainer
 	finalHandler       []func(ctx Context)
 
 	logD func(v ...interface{})
@@ -182,8 +182,9 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	}()
 
 	if route, e := s.GetRoute(ctx.req.Method(), path); e == nil {
-		for _, m := range s.middleware {
-			if m.name == `` || m.name == route.middlewareName {
+		for _, m := range s.middlewares {
+			log.D(m.group, m.secure)
+			if m.group == `` || m.group == route.group {
 				if !m.secure || (m.secure && route.secure) {
 					if e := m.f(ctx); e != nil {
 						ctx.resp.json = json.Object{}

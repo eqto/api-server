@@ -77,14 +77,7 @@ func (g *Group) FuncSecure(f func(Context) (interface{}, error)) (*Route, error)
 
 //AddMiddleware ..
 func (g *Group) AddMiddleware(f func(Context) error) Middleware {
-	m := middlewareContainer{f: f, name: g.name}
-	g.s.middleware = append(g.s.middleware, m)
-	return &m
+	m := &middlewareContainer{f: f, group: g.name}
+	g.s.middlewares = append(g.s.middlewares, m)
+	return m
 }
-
-// //NewFuncRoute create POST route with single func action
-// func NewFuncRoute(f func(Context) (interface{}, error)) *Route {
-// 	route := NewRoute()
-// 	route.AddFuncAction(f, `data`)
-// 	return route
-// }
