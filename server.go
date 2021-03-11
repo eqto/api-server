@@ -183,7 +183,6 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 
 	if route, e := s.GetRoute(ctx.req.Method(), path); e == nil {
 		for _, m := range s.middlewares {
-			log.D(m.group, m.secure)
 			if m.group == `` || m.group == route.group {
 				if !m.secure || (m.secure && route.secure) {
 					if e := m.f(ctx); e != nil {
