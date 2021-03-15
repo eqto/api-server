@@ -68,7 +68,7 @@ func (g *Group) Func(f func(Context) (interface{}, error)) (*Route, error) {
 
 //FuncSecure ..
 func (g *Group) FuncSecure(f func(Context) (interface{}, error)) (*Route, error) {
-	route, e := g.s.Func(f)
+	route, e := g.Func(f)
 	if e != nil {
 		return nil, e
 	}
