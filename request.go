@@ -14,6 +14,7 @@ type Request interface {
 	JSON() json.Object
 	Body() []byte
 	Header() *RequestHeader
+	ContentType() string
 }
 
 type request struct {
@@ -32,6 +33,9 @@ func (r *request) Header() *RequestHeader {
 
 func (r *request) Method() string {
 	return string(r.httpReq.Header.Method())
+}
+func (r *request) ContentType() string {
+	return r.Header().Get(`Content-Type`)
 }
 
 func (r *request) URL() *url.URL {
