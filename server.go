@@ -167,11 +167,13 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) (err error) {
+func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
-				err = e
+				ctx.resp.setError(StatusInternalServerError, e)
+			} else {
+				ctx.resp.setError(StatusInternalServerError, errors.New(`unknown error`))
 			}
 		}
 	}()
