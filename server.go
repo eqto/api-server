@@ -167,7 +167,14 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
+func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				err = e
+			}
+		}
+	}()
 	path := ctx.req.url.Path
 	if e := ctx.begin(); e != nil {
 		ctx.resp.setError(StatusInternalServerError, e)
