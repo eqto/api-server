@@ -170,6 +170,7 @@ func (s *Server) NormalizeFunc(n bool) {
 func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	defer func() {
 		if r := recover(); r != nil {
+			ctx.resp.json = json.Object{}
 			if e, ok := r.(error); ok {
 				ctx.resp.setError(StatusInternalServerError, e)
 			} else {
