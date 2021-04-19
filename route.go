@@ -55,8 +55,13 @@ func (r *Route) execute(s *Server, ctx *context) error {
 
 	for _, action := range r.action {
 		if result, e := action.execute(ctx); e == nil {
-			if prop := action.property(); prop != `` {
-				ctx.put(prop, result)
+			if data, ok := result.(Data); ok {
+				ctx.resp.httpResp.Header.Set(`Content-type`, data.ContentType)
+				ctx.resp.SetBody(data.Body)
+			} else {
+				if prop := action.property(); prop != `` {
+					ctx.put(prop, result)
+				}
 			}
 		} else {
 			ctx.resp.setError(StatusInternalServerError, e)
