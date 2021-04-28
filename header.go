@@ -26,6 +26,13 @@ func (r *RequestHeader) GetOrNil(key string) *string {
 	return nil
 }
 
+func (r *RequestHeader) Bytes() []byte {
+	if r.httpHeader == nil {
+		return []byte{}
+	}
+	return r.httpHeader.Header()
+}
+
 //ResponseHeader ...
 type ResponseHeader struct {
 	httpHeader *fasthttp.ResponseHeader
