@@ -153,6 +153,11 @@ func (s *Server) QuerySecure(path, query, params string) (*Route, error) {
 	return s.defGroup().QuerySecure(path, query, params)
 }
 
+//Get ..
+func (s *Server) Get(path string, f func(Context) (interface{}, error)) *Route {
+	return s.defGroup().Get(path, f)
+}
+
 //GetRoute ...
 func (s *Server) GetRoute(method, path string) (*Route, error) {
 	method = strings.ToUpper(method)

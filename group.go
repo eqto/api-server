@@ -18,6 +18,14 @@ func (g *Group) newRoute() *Route {
 	return new(Route).UseGroup(g.name)
 }
 
+//Get ..
+func (g *Group) Get(path string, f func(Context) (interface{}, error)) *Route {
+	route := g.newRoute()
+	route.AddFuncAction(f, `data`)
+	g.s.SetRoute(MethodGet, path, route)
+	return route
+}
+
 //Post ..
 func (g *Group) Post(path string, f func(Context) (interface{}, error)) *Route {
 	route := g.newRoute()
