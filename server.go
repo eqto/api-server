@@ -219,8 +219,6 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 			return e
 		}
 		return nil
-	} else {
-		s.logD(fmt.Sprintf(`Route not found %s %s`, ctx.req.Method(), path))
 	}
 	for _, proxy := range s.proxies {
 		if proxy.match(string(path)) {
