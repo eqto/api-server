@@ -56,6 +56,9 @@ func (r *Route) execute(s *Server, ctx *context) error {
 	for _, action := range r.action {
 		if result, e := action.execute(ctx); e == nil {
 			if data, ok := result.(Data); ok {
+				if data.Status > 0 {
+					ctx.resp.httpResp.SetStatusCode(data.Status)
+				}
 				ctx.resp.httpResp.Header.Set(`Content-type`, data.ContentType)
 				ctx.resp.SetBody(data.Body)
 			} else {
