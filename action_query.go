@@ -169,7 +169,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 				return nil, errors.New(`Duplicate entry`)
 			}
 		}
-		ctx.s.logE(err)
+		ctx.s.logger.E(err)
 		return nil, errExecutingQuery
 	}
 	switch q.qType {

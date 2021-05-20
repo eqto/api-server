@@ -64,7 +64,7 @@ func (g *Group) Func(f func(Context) (interface{}, error)) (*Route, error) {
 	name := runtime.FuncForPC(ptr).Name()
 	name = filepath.Base(name)
 	if strings.Count(name, `.`) > 1 {
-		g.s.debug(`unsupported add inline function`, name)
+		g.s.logger.D(`unsupported add inline function`, name)
 		return nil, errors.New(`unsupported add inline function`)
 	}
 	name = strings.ReplaceAll(name, `.`, `/`)

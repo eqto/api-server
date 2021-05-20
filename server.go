@@ -2,12 +2,12 @@ package api
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
 	"github.com/eqto/go-db"
 	"github.com/eqto/go-json"
-	log "github.com/eqto/go-logger"
 	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 )
@@ -31,9 +31,7 @@ type Server struct {
 	middlewares        []*middlewareContainer
 	finalHandler       []func(ctx Context)
 
-	logD func(v ...interface{})
-	logW func(v ...interface{})
-	logE func(v ...interface{})
+	logger logger
 
 	stdGroup *Group
 }
@@ -120,7 +118,7 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 		path = normalizePath(path)
 	}
 	s.routeMap[method][path] = route
-	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
+	s.logger.D(fmt.Sprintf(`add route %s %s`, method, path))
 }
 
 //Func add route with single func action. When secure is true, this route will validated using auth middlewares if any.
@@ -159,12 +157,12 @@ func (s *Server) Get(path string, f func(Context) (interface{}, error)) *Route {
 }
 
 //GetRoute ...
-func (s *Server) GetRoute(method, path string) (*Route, error) {
+func (s *Server) GetRoute(method, path string) (*Route, bool) {
 	method = strings.ToUpper(method)
 	if r, ok := s.routeMap[method][path]; ok {
-		return r, nil
+		return r, true
 	}
-	return nil, fmt.Errorf(`route %s %s not found`, method, path)
+	return nil, false
 }
 
 //NormalizeFunc if yes from this and beyond all Func added will renamed to lowercase, separated with underscore. Ex: HelloWorld registered as hello_world
@@ -196,7 +194,7 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 		}
 	}()
 
-	if route, e := s.GetRoute(ctx.req.Method(), path); e == nil {
+	if route, ok := s.GetRoute(ctx.req.Method(), path); ok {
 		for _, m := range s.middlewares {
 			if m.group == `` || m.group == route.group {
 				if !m.secure || (m.secure && route.secure) {
@@ -244,7 +242,7 @@ func (s *Server) Serve(port int) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
 		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response, s.cn)
 		if e != nil {
-			s.logW(e)
+			s.logger.W(e)
 			fastCtx.WriteString(e.Error())
 			return
 		}
@@ -302,10 +300,8 @@ func (s *Server) SetDebug() {
 }
 
 //SetLogger ...
-func (s *Server) SetLogger(debug func(...interface{}), warn func(...interface{}), err func(...interface{})) {
-	s.logD = debug
-	s.logW = warn
-	s.logE = err
+func (s *Server) SetLogger(debug func(...interface{}), info func(...interface{}), warn func(...interface{}), err func(...interface{})) {
+	s.logger = logger{D: debug, I: info, W: warn, E: err}
 }
 
 //Group ..
@@ -331,26 +327,13 @@ func (s *Server) routeMethod(method, path string) (int8, error) {
 	}
 }
 
-func (s *Server) debug(v ...interface{}) {
-	if !s.isProduction {
-		s.logD(v...)
-	}
-}
-func (s *Server) warn(v ...interface{}) {
-	s.logW(v...)
-}
-func (s *Server) error(v ...interface{}) {
-	s.logW(v...)
-}
-
 //New ...
 func New() *Server {
 	s := &Server{
 		routeMap: make(map[string]map[string]*Route),
-		logD:     log.Println,
-		logW:     log.Println,
-		logE:     log.Println,
 	}
+	s.SetLogger(log.Println, log.Println, log.Println, log.Println)
+
 	s.routeMap[MethodGet] = make(map[string]*Route)
 	s.routeMap[MethodPost] = make(map[string]*Route)
 	return s
