@@ -10,7 +10,7 @@ import (
 //Request ..
 type Request interface {
 	Header() *RequestHeader
-	URL() *url.URL
+	URL() url.URL
 	JSON() json.Object
 	Body() []byte
 }
@@ -19,7 +19,7 @@ type request struct {
 	Request
 	fastCtx *fasthttp.RequestCtx
 	js      json.Object
-	url     *url.URL
+	url     url.URL
 }
 
 func (r *request) fastReq() *fasthttp.Request {
@@ -32,13 +32,13 @@ func (r *request) Header() *RequestHeader {
 	return header
 }
 
-func (r *request) URL() *url.URL {
-	if r.url == nil {
-		url, e := url.Parse(string(r.fastReq().URI().FullURI()))
+func (r *request) URL() url.URL {
+	if (url.URL{}) == r.url {
+		u, e := url.Parse(string(r.fastReq().URI().FullURI()))
 		if e != nil {
-			return nil
+			return url.URL{}
 		}
-		r.url = url
+		r.url = *u
 	}
 	return r.url
 }
@@ -67,7 +67,8 @@ func (r *request) get(key string) interface{} {
 	if js.Has(key) {
 		return js.Get(key)
 	}
-	query := r.URL().Query()
+	u := r.URL()
+	query := u.Query()
 	if _, ok := query[key]; ok {
 		return query.Get(key)
 	}

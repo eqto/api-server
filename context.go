@@ -1,6 +1,7 @@
 package api
 
 import (
+	"net/url"
 	"strings"
 	"sync"
 
@@ -12,6 +13,7 @@ import (
 //Context ..
 type Context interface {
 	Session() Session
+	URL() url.URL
 	Method() string
 	ContentType() string
 	Request() Request
@@ -56,6 +58,10 @@ func (c *context) Tx() (*db.Tx, error) {
 		c.tx = tx
 	}
 	return c.tx, nil
+}
+
+func (c *context) URL() url.URL {
+	return c.req.URL()
 }
 
 func (c *context) Method() string {

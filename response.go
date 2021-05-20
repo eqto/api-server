@@ -21,8 +21,7 @@ type Response interface {
 
 type response struct {
 	Response
-	fastCtx *fasthttp.RequestCtx
-	// httpResp *fasthttp.Response
+	fastCtx  *fasthttp.RequestCtx
 	json     json.Object
 	err      error
 	errFrame []log.Frame
