@@ -169,7 +169,7 @@ func (s *Server) NormalizeFunc(n bool) {
 
 func (s *Server) execute(ctx *context) error {
 	defer func() {
-		ctx.commit()
+		ctx.closeTx()
 		if r := recover(); r != nil {
 			ctx.resp.json = json.Object{}
 			if e, ok := r.(error); ok {
@@ -180,7 +180,7 @@ func (s *Server) execute(ctx *context) error {
 		}
 	}()
 
-	path := ctx.req.URL().Path
+	path := ctx.URL().Path
 	if route, ok := s.GetRoute(ctx.Method(), path); ok {
 		for _, m := range s.middlewares {
 			if m.group == `` || m.group == route.group {
@@ -227,14 +227,12 @@ func (s *Server) execute(ctx *context) error {
 //Serve ..
 func (s *Server) Serve(port int) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
-		ctx, e := newContext(fastCtx)
+		ctx, e := newContext(s, fastCtx)
 		if e != nil {
 			s.logger.W(e)
 			fastCtx.WriteString(e.Error())
 			return
 		}
-		ctx.logger = s.logger
-		ctx.cn = s.cn
 		s.execute(ctx)
 
 		for _, h := range s.finalHandler {

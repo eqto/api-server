@@ -28,14 +28,14 @@ type context struct {
 	Context
 
 	fastCtx *fasthttp.RequestCtx
-	req     request
-	resp    response
-	sess    *session
-	logger  *logger
+	s       *Server
+
+	req  request
+	resp response
+	sess *session
 
 	vars json.Object
 
-	cn     *db.Connection
 	tx     *db.Tx
 	lockCn sync.Mutex
 
@@ -49,8 +49,9 @@ func (c *context) Redirect(url string) error {
 func (c *context) Tx() (*db.Tx, error) {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
-	if c.cn != nil && c.tx == nil {
-		tx, e := c.cn.Begin()
+	cn := c.s.Database()
+	if cn != nil && c.tx == nil {
+		tx, e := cn.Begin()
 		if e != nil { //db error
 			c.resp.setError(StatusInternalServerError, e)
 			return nil, e
@@ -92,7 +93,7 @@ func (c *context) GetValue(name string) interface{} {
 	return c.values[name]
 }
 
-func (c *context) commit() {
+func (c *context) closeTx() {
 	if c.tx == nil {
 		return
 	}
@@ -103,6 +104,7 @@ func (c *context) commit() {
 	} else {
 		c.tx.Commit()
 	}
+	c.tx = nil
 }
 
 func (c *context) put(property string, value interface{}) {
@@ -116,8 +118,13 @@ func (c *context) put(property string, value interface{}) {
 	}
 }
 
-func newContext(fastCtx *fasthttp.RequestCtx) (*context, error) {
+func (c *context) logger() *logger {
+	return c.s.logger
+}
+
+func newContext(s *Server, fastCtx *fasthttp.RequestCtx) (*context, error) {
 	ctx := &context{
+		s:       s,
 		fastCtx: fastCtx,
 		req:     request{fastCtx: fastCtx},
 		resp:    response{fastCtx: fastCtx},
