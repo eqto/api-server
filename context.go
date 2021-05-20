@@ -12,11 +12,14 @@ import (
 //Context ..
 type Context interface {
 	Session() Session
+	Method() string
+	ContentType() string
 	Request() Request
 	Response() Response
-	Tx() *db.Tx
+	Tx() (*db.Tx, error)
 	SetValue(name string, value interface{})
 	GetValue(name string) interface{}
+	Redirect(url string) error
 }
 
 type context struct {
@@ -35,6 +38,32 @@ type context struct {
 	lockCn sync.Mutex
 
 	values map[string]interface{}
+}
+
+func (c *context) Redirect(url string) error {
+	return nil
+}
+
+func (c *context) Tx() (*db.Tx, error) {
+	c.lockCn.Lock()
+	defer c.lockCn.Unlock()
+	if c.cn != nil && c.tx == nil {
+		tx, e := c.cn.Begin()
+		if e != nil { //db error
+			c.resp.setError(StatusInternalServerError, e)
+			return nil, e
+		}
+		c.tx = tx
+	}
+	return c.tx, nil
+}
+
+func (c *context) Method() string {
+	return string(c.fastCtx.Method())
+}
+
+func (c *context) ContentType() string {
+	return c.req.Header().Get(`Content-Type`)
 }
 
 //Session ..
@@ -57,34 +86,15 @@ func (c *context) GetValue(name string) interface{} {
 	return c.values[name]
 }
 
-func (c *context) Tx() *db.Tx {
-	return c.tx
-}
-
-func (c *context) begin() error {
-	c.lockCn.Lock()
-	defer c.lockCn.Unlock()
-	if c.cn != nil {
-		tx, e := c.cn.Begin()
-		if e != nil { //db error
-			return e
-		}
-		c.tx = tx
-	}
-	return nil
-}
-func (c *context) rollback() {
-	c.lockCn.Lock()
-	defer c.lockCn.Unlock()
-	if c.tx != nil {
-		c.tx.Rollback()
-		c.tx = nil
-	}
-}
 func (c *context) commit() {
+	if c.tx == nil {
+		return
+	}
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
-	if c.tx != nil {
+	if c.resp.err != nil {
+		c.tx.Rollback()
+	} else {
 		c.tx.Commit()
 	}
 }

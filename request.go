@@ -9,12 +9,10 @@ import (
 
 //Request ..
 type Request interface {
-	Method() string
+	Header() *RequestHeader
 	URL() *url.URL
 	JSON() json.Object
 	Body() []byte
-	Header() *RequestHeader
-	ContentType() string
 }
 
 type request struct {
@@ -32,13 +30,6 @@ func (r *request) Header() *RequestHeader {
 	header := &RequestHeader{httpHeader: &fasthttp.RequestHeader{}}
 	r.fastReq().Header.CopyTo(header.httpHeader)
 	return header
-}
-
-func (r *request) Method() string {
-	return string(r.fastReq().Header.Method())
-}
-func (r *request) ContentType() string {
-	return r.Header().Get(`Content-Type`)
 }
 
 func (r *request) URL() *url.URL {

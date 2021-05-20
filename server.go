@@ -169,6 +169,7 @@ func (s *Server) NormalizeFunc(n bool) {
 
 func (s *Server) execute(ctx *context) error {
 	defer func() {
+		ctx.commit()
 		if r := recover(); r != nil {
 			ctx.resp.json = json.Object{}
 			if e, ok := r.(error); ok {
@@ -178,20 +179,9 @@ func (s *Server) execute(ctx *context) error {
 			}
 		}
 	}()
-	path := ctx.req.URL().Path
-	if e := ctx.begin(); e != nil {
-		ctx.resp.setError(StatusInternalServerError, e)
-		return e
-	}
-	defer func() {
-		if ctx.resp.err != nil {
-			ctx.rollback()
-		} else {
-			ctx.commit()
-		}
-	}()
 
-	if route, ok := s.GetRoute(ctx.req.Method(), path); ok {
+	path := ctx.req.URL().Path
+	if route, ok := s.GetRoute(ctx.Method(), path); ok {
 		for _, m := range s.middlewares {
 			if m.group == `` || m.group == route.group {
 				if !m.secure || (m.secure && route.secure) {
