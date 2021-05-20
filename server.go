@@ -20,10 +20,7 @@ type Server struct {
 	proxies  []proxy
 	files    []file
 
-	defaultContentType string
-	normalize          bool
-
-	isProduction bool
+	normalize bool
 
 	cn                 *db.Connection
 	dbConnected        bool
@@ -240,14 +237,7 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 //Serve ..
 func (s *Server) Serve(port int) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
-		println(string(fastCtx.URI().FullURI()))
-
-		// url, e := url.Parse(string(fastCtx.Request.URI().FullURI()))
-		// if url == nil {
-		// 	return nil, errors.Wrap(e, `invalid url `+string(req.RequestURI()))
-		// }
-
-		ctx, e := newContext(&fastCtx.Request, &fastCtx.Response)
+		ctx, e := newContext(fastCtx)
 		if e != nil {
 			s.logger.W(e)
 			fastCtx.WriteString(e.Error())
@@ -261,7 +251,7 @@ func (s *Server) Serve(port int) error {
 			h(ctx)
 		}
 		if ctx.resp.json != nil {
-			ctx.resp.httpResp.Header.Set(`Content-type`, `application/json`)
+			ctx.resp.fastResp().Header.Set(`Content-type`, `application/json`)
 			ctx.resp.json.Put(`status`, ctx.resp.getStatus())
 			ctx.resp.json.Put(`message`, ctx.resp.getMessage())
 
@@ -298,16 +288,6 @@ func (s *Server) Shutdown() error {
 	return nil
 }
 
-//SetProduction ...
-func (s *Server) SetProduction() {
-	s.isProduction = true
-}
-
-//SetDebug ...
-func (s *Server) SetDebug() {
-	s.isProduction = false
-}
-
 //SetLogger ...
 func (s *Server) SetLogger(debug func(...interface{}), info func(...interface{}), warn func(...interface{}), err func(...interface{})) {
 	s.logger = logger{D: debug, I: info, W: warn, E: err}
@@ -323,17 +303,6 @@ func (s *Server) defGroup() *Group {
 		s.stdGroup = s.Group(``)
 	}
 	return s.stdGroup
-}
-
-func (s *Server) routeMethod(method, path string) (int8, error) {
-	switch method {
-	case MethodGet:
-		return routeMethodGet, nil
-	case MethodPost:
-		return routeMethodPost, nil
-	default:
-		return 0, fmt.Errorf(`unrecognized method %s, choose between api.MethodGet or api.MethodPost`, method)
-	}
 }
 
 //New ...

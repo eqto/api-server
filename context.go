@@ -32,7 +32,6 @@ type context struct {
 	tx     *db.Tx
 	lockCn sync.Mutex
 
-	next   bool
 	values map[string]interface{}
 }
 
@@ -99,15 +98,14 @@ func (c *context) put(property string, value interface{}) {
 	}
 }
 
-func newContext(req *fasthttp.Request, resp *fasthttp.Response) (*context, error) {
+func newContext(fastCtx *fasthttp.RequestCtx) (*context, error) {
 	ctx := &context{
-		req:    request{httpReq: req},
-		resp:   response{httpResp: resp},
+		req:    request{fastCtx: fastCtx},
+		resp:   response{fastCtx: fastCtx},
 		values: make(map[string]interface{}),
 		sess:   &session{},
 		lockCn: sync.Mutex{},
 	}
-	ctx.req.body = req.Body()
 
 	return ctx, nil
 }

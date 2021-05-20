@@ -35,15 +35,15 @@ func (r *RequestHeader) Bytes() []byte {
 
 //ResponseHeader ...
 type ResponseHeader struct {
-	httpHeader *fasthttp.ResponseHeader
+	resp *fasthttp.Response
 }
 
 //Add ..
 func (r *ResponseHeader) Add(key, value string) {
-	r.httpHeader.Add(key, value)
+	r.resp.Header.Add(key, value)
 }
 
 //Set ..
 func (r *ResponseHeader) Set(key, value string) {
-	r.httpHeader.Set(key, value)
+	r.resp.Header.Set(key, value)
 }

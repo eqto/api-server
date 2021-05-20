@@ -21,7 +21,8 @@ type Response interface {
 
 type response struct {
 	Response
-	httpResp *fasthttp.Response
+	fastCtx *fasthttp.RequestCtx
+	// httpResp *fasthttp.Response
 	json     json.Object
 	err      error
 	errFrame []log.Frame
@@ -29,21 +30,25 @@ type response struct {
 	message  string
 }
 
+func (r *response) fastResp() *fasthttp.Response {
+	return &r.fastCtx.Response
+}
+
 func (r *response) Header() *ResponseHeader {
-	return &ResponseHeader{&r.httpResp.Header}
+	return &ResponseHeader{r.fastResp()}
 }
 
 func (r *response) Body() []byte {
-	return r.httpResp.Body()
+	return r.fastResp().Body()
 }
 
 func (r *response) SetBody(body []byte) {
-	r.httpResp.SetBody(body)
+	r.fastResp().SetBody(body)
 	r.json = nil
 }
 
 func (r *response) ContentType() string {
-	return string(r.httpResp.Header.ContentType())
+	return string(r.fastResp().Header.ContentType())
 }
 
 func (r *response) SetStatus(status int, msg string) {
@@ -63,7 +68,7 @@ func (r *response) getStatus() int {
 	if r.err != nil {
 		if r.status > 0 {
 			return r.status
-		} else if code := r.httpResp.StatusCode(); code != 200 {
+		} else if code := r.fastResp().StatusCode(); code != 200 {
 			return code
 		} else {
 			return 999
@@ -86,13 +91,13 @@ func (r *response) JSON() *json.Object {
 	if r.json == nil {
 		r.json = json.Object{}
 	}
-	r.httpResp.ResetBody()
+	r.fastResp().ResetBody()
 	return &r.json
 }
 
 func (r *response) setError(status int, e error) {
 	if r.err == nil {
-		r.httpResp.SetStatusCode(status)
+		r.fastResp().SetStatusCode(status)
 		if e == nil {
 			e = errors.New(``)
 		}

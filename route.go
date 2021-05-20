@@ -1,10 +1,5 @@
 package api
 
-const (
-	routeMethodGet  int8 = 1
-	routeMethodPost int8 = 2
-)
-
 //Route ...
 type Route struct {
 	action []Action
@@ -57,9 +52,9 @@ func (r *Route) execute(s *Server, ctx *context) error {
 		if result, e := action.execute(ctx); e == nil {
 			if data, ok := result.(Data); ok {
 				if data.Status > 0 {
-					ctx.resp.httpResp.SetStatusCode(data.Status)
+					ctx.resp.fastResp().SetStatusCode(data.Status)
 				}
-				ctx.resp.httpResp.Header.Set(`Content-type`, data.ContentType)
+				ctx.resp.fastResp().Header.Set(`Content-type`, data.ContentType)
 				ctx.resp.SetBody(data.Body)
 			} else {
 				if prop := action.property(); prop != `` {

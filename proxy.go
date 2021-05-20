@@ -31,11 +31,11 @@ func postprocessResponse(resp *fasthttp.Response) {
 }
 
 func (p *proxy) execute(s *Server, ctx *context) error {
-	prepareRequest(ctx.req.httpReq)
-	if e := p.client.DoTimeout(ctx.req.httpReq, ctx.resp.httpResp, 60*time.Second); e != nil {
+	prepareRequest(ctx.req.fastReq())
+	if e := p.client.DoTimeout(ctx.req.fastReq(), ctx.resp.fastResp(), 60*time.Second); e != nil {
 		return e
 	}
-	postprocessResponse(ctx.resp.httpResp)
+	postprocessResponse(ctx.resp.fastResp())
 	return nil
 
 	//TODO used when responsemiddleware implemented
