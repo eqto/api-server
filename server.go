@@ -167,61 +167,55 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(ctx *context) error {
-	defer func() {
-		ctx.closeTx()
-		if r := recover(); r != nil {
-			ctx.resp.json = json.Object{}
-			if e, ok := r.(error); ok {
-				ctx.resp.setError(StatusInternalServerError, e)
-			} else {
-				ctx.resp.setError(StatusInternalServerError, errors.New(`unknown error`))
-			}
-		}
-	}()
-
-	path := ctx.URL().Path
-	if route, ok := s.GetRoute(ctx.Method(), path); ok {
-		for _, m := range s.middlewares {
-			if m.group == `` || m.group == route.group {
-				if !m.secure || (m.secure && route.secure) {
-					if e := m.f(ctx); e != nil {
-						ctx.resp.json = json.Object{}
-						if m.secure {
-							ctx.resp.setError(StatusUnauthorized, e)
-						} else {
-							ctx.resp.setError(StatusInternalServerError, e)
-						}
-						return e
+func (s *Server) executeRoutes(ctx *context, path string) bool {
+	route, ok := s.GetRoute(ctx.Method(), path)
+	if !ok {
+		return false
+	}
+	for _, m := range s.middlewares {
+		if m.group == `` || m.group == route.group {
+			if !m.secure || (m.secure && route.secure) {
+				if e := m.f(ctx); e != nil {
+					ctx.resp.json = json.Object{}
+					if m.secure {
+						ctx.resp.setError(StatusUnauthorized, e)
+					} else {
+						ctx.resp.setError(StatusInternalServerError, e)
 					}
+					return true
 				}
 			}
 		}
-
-		if e := route.execute(s, ctx); e != nil {
-			ctx.resp.json = json.Object{}
-			ctx.resp.setError(StatusInternalServerError, e)
-			return e
-		}
-		return nil
 	}
+
+	if e := route.execute(s, ctx); e != nil {
+		ctx.resp.json = json.Object{}
+		ctx.resp.setError(StatusInternalServerError, e)
+	}
+	ctx.closeTx()
+	return true
+}
+
+func (s *Server) executeProxies(ctx *context, path string) bool {
 	for _, proxy := range s.proxies {
 		if proxy.match(string(path)) {
 			if e := proxy.execute(s, ctx); e != nil {
 				ctx.resp.setError(StatusInternalServerError, e)
-				return e
 			}
-			return nil
+			return true
 		}
 	}
+	return false
+}
+
+func (s *Server) executeFiles(ctx *context, path string) bool {
 	for _, file := range s.files {
 		if file.match(string(path)) {
 			file.handler(ctx.fastCtx)
-			return nil
+			return true
 		}
 	}
-	ctx.resp.setError(StatusNotFound, errors.New(`route `+path+` not found`))
-	return ctx.resp.err
+	return false
 }
 
 //Serve ..
@@ -233,7 +227,16 @@ func (s *Server) Serve(port int) error {
 			fastCtx.WriteString(e.Error())
 			return
 		}
-		s.execute(ctx)
+
+		path := ctx.URL().Path
+
+		if ok := s.executeRoutes(ctx, path); !ok {
+			if ok := s.executeProxies(ctx, path); !ok {
+				if ok := s.executeFiles(ctx, path); !ok {
+					ctx.resp.setError(StatusNotFound, errors.New(`route `+path+` not found`))
+				}
+			}
+		}
 
 		for _, h := range s.finalHandler {
 			h(ctx)

@@ -21,7 +21,6 @@ type Context interface {
 	Tx() (*db.Tx, error)
 	SetValue(name string, value interface{})
 	GetValue(name string) interface{}
-	Redirect(url string) error
 }
 
 type context struct {
@@ -40,10 +39,6 @@ type context struct {
 	lockCn sync.Mutex
 
 	values map[string]interface{}
-}
-
-func (c *context) Redirect(url string) error {
-	return nil
 }
 
 func (c *context) Tx() (*db.Tx, error) {
