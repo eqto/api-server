@@ -21,10 +21,12 @@ type Context interface {
 
 type context struct {
 	Context
-	req    request
-	resp   response
-	sess   *session
-	logger *logger
+
+	fastCtx *fasthttp.RequestCtx
+	req     request
+	resp    response
+	sess    *session
+	logger  *logger
 
 	vars json.Object
 
@@ -100,11 +102,12 @@ func (c *context) put(property string, value interface{}) {
 
 func newContext(fastCtx *fasthttp.RequestCtx) (*context, error) {
 	ctx := &context{
-		req:    request{fastCtx: fastCtx},
-		resp:   response{fastCtx: fastCtx},
-		values: make(map[string]interface{}),
-		sess:   &session{},
-		lockCn: sync.Mutex{},
+		fastCtx: fastCtx,
+		req:     request{fastCtx: fastCtx},
+		resp:    response{fastCtx: fastCtx},
+		values:  make(map[string]interface{}),
+		sess:    &session{},
+		lockCn:  sync.Mutex{},
 	}
 
 	return ctx, nil

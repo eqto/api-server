@@ -28,7 +28,7 @@ type Server struct {
 	middlewares        []*middlewareContainer
 	finalHandler       []func(ctx Context)
 
-	logger logger
+	logger *logger
 
 	stdGroup *Group
 }
@@ -167,7 +167,7 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
+func (s *Server) execute(ctx *context) error {
 	defer func() {
 		if r := recover(); r != nil {
 			ctx.resp.json = json.Object{}
@@ -226,7 +226,7 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	}
 	for _, file := range s.files {
 		if file.match(string(path)) {
-			file.handler(fastCtx)
+			file.handler(ctx.fastCtx)
 			return nil
 		}
 	}
@@ -243,9 +243,9 @@ func (s *Server) Serve(port int) error {
 			fastCtx.WriteString(e.Error())
 			return
 		}
-		ctx.logger = &s.logger
+		ctx.logger = s.logger
 		ctx.cn = s.cn
-		s.execute(fastCtx, ctx)
+		s.execute(ctx)
 
 		for _, h := range s.finalHandler {
 			h(ctx)
@@ -290,7 +290,7 @@ func (s *Server) Shutdown() error {
 
 //SetLogger ...
 func (s *Server) SetLogger(debug func(...interface{}), info func(...interface{}), warn func(...interface{}), err func(...interface{})) {
-	s.logger = logger{D: debug, I: info, W: warn, E: err}
+	s.logger = &logger{D: debug, I: info, W: warn, E: err}
 }
 
 //Group ..

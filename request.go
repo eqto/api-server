@@ -21,7 +21,7 @@ type request struct {
 	Request
 	fastCtx *fasthttp.RequestCtx
 	js      json.Object
-	urld    *url.URL
+	url     *url.URL
 }
 
 func (r *request) fastReq() *fasthttp.Request {
@@ -42,14 +42,14 @@ func (r *request) ContentType() string {
 }
 
 func (r *request) URL() *url.URL {
-	if r.urld == nil {
+	if r.url == nil {
 		url, e := url.Parse(string(r.fastReq().URI().FullURI()))
 		if e != nil {
 			return nil
 		}
-		r.urld = url
+		r.url = url
 	}
-	return r.urld
+	return r.url
 }
 
 func (r *request) JSON() json.Object {
