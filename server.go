@@ -181,7 +181,7 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 			}
 		}
 	}()
-	path := ctx.req.url.Path
+	path := ctx.req.URL().Path
 	if e := ctx.begin(); e != nil {
 		ctx.resp.setError(StatusInternalServerError, e)
 		return e
@@ -240,12 +240,21 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 //Serve ..
 func (s *Server) Serve(port int) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
-		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response, s.cn)
+		println(string(fastCtx.URI().FullURI()))
+
+		// url, e := url.Parse(string(fastCtx.Request.URI().FullURI()))
+		// if url == nil {
+		// 	return nil, errors.Wrap(e, `invalid url `+string(req.RequestURI()))
+		// }
+
+		ctx, e := newContext(&fastCtx.Request, &fastCtx.Response)
 		if e != nil {
 			s.logger.W(e)
 			fastCtx.WriteString(e.Error())
 			return
 		}
+		ctx.logger = &s.logger
+		ctx.cn = s.cn
 		s.execute(fastCtx, ctx)
 
 		for _, h := range s.finalHandler {

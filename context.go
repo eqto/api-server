@@ -1,13 +1,11 @@
 package api
 
 import (
-	"net/url"
 	"strings"
 	"sync"
 
 	"github.com/eqto/go-db"
 	"github.com/eqto/go-json"
-	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 )
 
@@ -23,10 +21,10 @@ type Context interface {
 
 type context struct {
 	Context
-	s    *Server
-	req  request
-	resp response
-	sess *session
+	req    request
+	resp   response
+	sess   *session
+	logger *logger
 
 	vars json.Object
 
@@ -101,21 +99,14 @@ func (c *context) put(property string, value interface{}) {
 	}
 }
 
-func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *db.Connection) (*context, error) {
+func newContext(req *fasthttp.Request, resp *fasthttp.Response) (*context, error) {
 	ctx := &context{
-		s:      s,
 		req:    request{httpReq: req},
 		resp:   response{httpResp: resp},
-		cn:     cn,
 		values: make(map[string]interface{}),
 		sess:   &session{},
 		lockCn: sync.Mutex{},
 	}
-	url, e := url.Parse(string(req.URI().FullURI()))
-	if url == nil {
-		return nil, errors.Wrap(e, `invalid url `+string(req.RequestURI()))
-	}
-	ctx.req.url = url
 	ctx.req.body = req.Body()
 
 	return ctx, nil

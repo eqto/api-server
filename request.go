@@ -20,9 +20,9 @@ type Request interface {
 type request struct {
 	Request
 	httpReq *fasthttp.Request
-	url     *url.URL
 	body    []byte
 	js      json.Object
+	urld    *url.URL
 }
 
 func (r *request) Header() *RequestHeader {
@@ -39,7 +39,14 @@ func (r *request) ContentType() string {
 }
 
 func (r *request) URL() *url.URL {
-	return r.url
+	if r.urld == nil {
+		url, e := url.Parse(string(r.httpReq.URI().FullURI()))
+		if e != nil {
+			return nil
+		}
+		r.urld = url
+	}
+	return r.urld
 }
 
 func (r *request) JSON() json.Object {
@@ -65,7 +72,7 @@ func (r *request) get(key string) interface{} {
 	if js.Has(key) {
 		return js.Get(key)
 	}
-	query := r.url.Query()
+	query := r.URL().Query()
 	if _, ok := query[key]; ok {
 		return query.Get(key)
 	}
