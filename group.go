@@ -19,7 +19,7 @@ func (g *Group) newRoute() *Route {
 }
 
 //Get ..
-func (g *Group) Get(path string, f func(Context) (interface{}, error)) *Route {
+func (g *Group) Get(path string, f func(Context) error) *Route {
 	route := g.newRoute()
 	route.AddFuncAction(f, `data`)
 	g.s.SetRoute(MethodGet, path, route)
@@ -27,7 +27,7 @@ func (g *Group) Get(path string, f func(Context) (interface{}, error)) *Route {
 }
 
 //Post ..
-func (g *Group) Post(path string, f func(Context) (interface{}, error)) *Route {
+func (g *Group) Post(path string, f func(Context) error) *Route {
 	route := g.newRoute()
 	route.AddFuncAction(f, `data`)
 	g.s.SetRoute(MethodPost, path, route)
@@ -35,7 +35,7 @@ func (g *Group) Post(path string, f func(Context) (interface{}, error)) *Route {
 }
 
 //PostSecure ..
-func (g *Group) PostSecure(path string, f func(Context) (interface{}, error)) *Route {
+func (g *Group) PostSecure(path string, f func(Context) error) *Route {
 	return g.Post(path, f).Secure()
 }
 
@@ -59,7 +59,7 @@ func (g *Group) QuerySecure(path, query, params string) (*Route, error) {
 }
 
 //Func add route with single func action. When secure is true, this route will validated using auth middlewares if any.
-func (g *Group) Func(f func(Context) (interface{}, error)) (*Route, error) {
+func (g *Group) Func(f func(Context) error) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
 	name = filepath.Base(name)
@@ -75,7 +75,7 @@ func (g *Group) Func(f func(Context) (interface{}, error)) (*Route, error) {
 }
 
 //FuncSecure ..
-func (g *Group) FuncSecure(f func(Context) (interface{}, error)) (*Route, error) {
+func (g *Group) FuncSecure(f func(Context) error) (*Route, error) {
 	route, e := g.Func(f)
 	if e != nil {
 		return nil, e

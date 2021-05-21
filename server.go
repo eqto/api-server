@@ -119,22 +119,22 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 }
 
 //Func add route with single func action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) Func(f func(Context) (interface{}, error)) (*Route, error) {
+func (s *Server) Func(f func(Context) error) (*Route, error) {
 	return s.defGroup().Func(f)
 }
 
 //FuncSecure ..
-func (s *Server) FuncSecure(f func(Context) (interface{}, error)) (*Route, error) {
+func (s *Server) FuncSecure(f func(Context) error) (*Route, error) {
 	return s.defGroup().FuncSecure(f)
 }
 
 //Post ..
-func (s *Server) Post(path string, f func(Context) (interface{}, error)) *Route {
+func (s *Server) Post(path string, f func(Context) error) *Route {
 	return s.defGroup().Post(path, f)
 }
 
 //PostSecure ..
-func (s *Server) PostSecure(path string, f func(Context) (interface{}, error)) *Route {
+func (s *Server) PostSecure(path string, f func(Context) error) *Route {
 	return s.defGroup().PostSecure(path, f)
 }
 
@@ -149,7 +149,7 @@ func (s *Server) QuerySecure(path, query, params string) (*Route, error) {
 }
 
 //Get ..
-func (s *Server) Get(path string, f func(Context) (interface{}, error)) *Route {
+func (s *Server) Get(path string, f func(Context) error) *Route {
 	return s.defGroup().Get(path, f)
 }
 

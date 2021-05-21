@@ -16,6 +16,9 @@ type Context interface {
 	Method() string
 	ContentType() string
 	SetCookie(key, value string, expire int)
+	Write(value interface{}) error
+	Status(status int, msg string) error
+	StatusNotFound(msg string) error
 
 	Request() Request
 	Response() Response
@@ -31,6 +34,8 @@ type context struct {
 	fastCtx *fasthttp.RequestCtx
 	s       *Server
 
+	property string
+
 	req  request
 	resp response
 	sess *session
@@ -41,6 +46,23 @@ type context struct {
 	lockCn sync.Mutex
 
 	values map[string]interface{}
+}
+
+func (c *context) Write(value interface{}) error {
+	if c.property != `` {
+		c.put(c.property, value)
+	}
+	return nil
+}
+
+func (c *context) Status(status int, msg string) error {
+	c.resp.SetStatusCode(status)
+	c.resp.message = msg
+	return nil
+}
+
+func (c *context) StatusNotFound(msg string) error {
+	return c.Status(StatusNotFound, msg)
 }
 
 func (c *context) SetCookie(key, value string, expire int) {

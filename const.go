@@ -1,5 +1,7 @@
 package api
 
+import "github.com/valyala/fasthttp"
+
 const (
 	//MethodGet GET
 	MethodGet string = `GET`
@@ -11,12 +13,13 @@ const (
 	//StatusUnauthorized ...
 	StatusUnauthorized = 401
 	//StatusNotFound ...
-	StatusNotFound = 404
+	StatusNotFound = fasthttp.StatusNotFound
 	//StatusOK ...
 	StatusOK = 200
 
 	//StatusInternalServerError ...
 	StatusInternalServerError = 500
+	StatusServiceUnavailable  = fasthttp.StatusServiceUnavailable
 
 	//StatusBadGateway ...
 	StatusBadGateway = 502

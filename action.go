@@ -2,7 +2,7 @@ package api
 
 //Action ...
 type Action interface {
-	execute(*context) (interface{}, error)
+	execute(*context) error
 	property() string
 	params() []string
 }

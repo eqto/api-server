@@ -1,10 +1,5 @@
 package api
 
-import (
-	"github.com/eqto/api-server/status"
-	"github.com/valyala/fasthttp"
-)
-
 //Route ...
 type Route struct {
 	action []Action
@@ -35,7 +30,7 @@ func (r *Route) AddQueryAction(query, params, property string) (Action, error) {
 }
 
 //AddFuncAction ...
-func (r *Route) AddFuncAction(f func(Context) (interface{}, error), property string) Action {
+func (r *Route) AddFuncAction(f func(Context) error, property string) Action {
 	act := newFuncAction(f, property)
 	r.action = append(r.action, act)
 	return act
@@ -54,30 +49,9 @@ func (r *Route) execute(s *Server, ctx *context) error {
 	}
 
 	for _, action := range r.action {
-		if result, e := action.execute(ctx); e == nil {
-			if redirect, ok := result.(status.Redirect); ok {
-				// regex := regexp.MustCompile(`http(s|):|//`)
-				// if url := string(redirect); regex.MatchString(url) { //absolute url
-				// 	ctx.fastCtx.Redirect(url, fasthttp.StatusFound)
-				// } else {
-
-				// }
-				url := string(redirect)
-				ctx.fastCtx.Redirect(url, fasthttp.StatusFound)
-				return nil
-			} else if data, ok := result.(Data); ok {
-				if data.Status > 0 {
-					ctx.resp.fastResp().SetStatusCode(data.Status)
-				}
-				ctx.resp.fastResp().Header.Set(`Content-type`, data.ContentType)
-				ctx.resp.SetBody(data.Body)
-			} else {
-				if prop := action.property(); prop != `` {
-					ctx.put(prop, result)
-				}
-			}
-		} else {
-			ctx.resp.setError(StatusInternalServerError, e)
+		ctx.property = action.property()
+		if e := action.execute(ctx); e != nil {
+			ctx.resp.setError(StatusServiceUnavailable, e)
 			return e
 		}
 	}
