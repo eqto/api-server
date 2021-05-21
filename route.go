@@ -1,5 +1,10 @@
 package api
 
+import (
+	"github.com/eqto/api-server/status"
+	"github.com/valyala/fasthttp"
+)
+
 //Route ...
 type Route struct {
 	action []Action
@@ -50,7 +55,17 @@ func (r *Route) execute(s *Server, ctx *context) error {
 
 	for _, action := range r.action {
 		if result, e := action.execute(ctx); e == nil {
-			if data, ok := result.(Data); ok {
+			if redirect, ok := result.(status.Redirect); ok {
+				// regex := regexp.MustCompile(`http(s|):|//`)
+				// if url := string(redirect); regex.MatchString(url) { //absolute url
+				// 	ctx.fastCtx.Redirect(url, fasthttp.StatusFound)
+				// } else {
+
+				// }
+				url := string(redirect)
+				ctx.fastCtx.Redirect(url, fasthttp.StatusFound)
+				return nil
+			} else if data, ok := result.(Data); ok {
 				if data.Status > 0 {
 					ctx.resp.fastResp().SetStatusCode(data.Status)
 				}

@@ -12,13 +12,15 @@ import (
 
 //Context ..
 type Context interface {
-	Session() Session
-	URL() url.URL
+	URL() *url.URL
 	Method() string
 	ContentType() string
+	SetCookie(key, value string, expire int)
+
 	Request() Request
 	Response() Response
 	Tx() (*db.Tx, error)
+	Session() Session
 	SetValue(name string, value interface{})
 	GetValue(name string) interface{}
 }
@@ -41,6 +43,16 @@ type context struct {
 	values map[string]interface{}
 }
 
+func (c *context) SetCookie(key, value string, expire int) {
+	ck := &fasthttp.Cookie{}
+	ck.SetKey(key)
+	ck.SetValue(value)
+	ck.SetMaxAge(expire)
+	ck.SetHTTPOnly(true)
+	ck.SetPath(`/`)
+	c.fastCtx.Response.Header.SetCookie(ck)
+}
+
 func (c *context) Tx() (*db.Tx, error) {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
@@ -56,7 +68,7 @@ func (c *context) Tx() (*db.Tx, error) {
 	return c.tx, nil
 }
 
-func (c *context) URL() url.URL {
+func (c *context) URL() *url.URL {
 	return c.req.URL()
 }
 
