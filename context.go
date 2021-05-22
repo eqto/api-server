@@ -1,41 +1,153 @@
 package api
 
 import (
+	"errors"
 	"net/url"
 	"strings"
 	"sync"
 
 	"github.com/eqto/go-db"
 	"github.com/eqto/go-json"
-	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 )
 
 //Context ..
 type Context interface {
-	Session() Session
+	URL() *url.URL
+	Method() string
+	ContentType() string
+	Write(value interface{}) error
+
+	//WriteBody write to body and ignoring the next action
+	WriteBody(contentType string, body []byte) error
+	//Status stop execution and return status and message
+	Status(status int, msg string) error
+	//Error stop execution, rollback database transaction, and return status and message
+	Error(status int, msg string) error
+
+	//StatusBadRequest 400
+	StatusBadRequest(msg string) error
+	//StatusUnauthorized 401
+	StatusUnauthorized(msg string) error
+	//StatusUnauthorized 403
+	StatusForbidden(msg string) error
+	//StatusNotFound 404
+	StatusNotFound(msg string) error
+	StatusServiceUnavailable(msg string) error
+	StatusInternalServerError(msg string) error
+
 	Request() Request
 	Response() Response
-	Tx() *db.Tx
+
+	Tx() (*db.Tx, error)
+	Session() Session
 	SetValue(name string, value interface{})
 	GetValue(name string) interface{}
 }
 
 type context struct {
 	Context
-	s    *Server
+
+	s *Server
+
+	property string
+
 	req  request
 	resp response
+
 	sess *session
 
 	vars json.Object
 
-	cn     *db.Connection
 	tx     *db.Tx
 	lockCn sync.Mutex
 
-	next   bool
 	values map[string]interface{}
+}
+
+func (c *context) Write(value interface{}) error {
+	if !c.resp.stop && c.property != `` {
+		c.put(c.property, value)
+	}
+	return nil
+}
+
+func (c *context) WriteBody(contentType string, body []byte) error {
+	if !c.resp.stop {
+		resp := c.Response()
+		if contentType != `` {
+			resp.SetContentType(contentType)
+		}
+		resp.Body()
+		resp.SetBody(body)
+		c.resp.stop = true
+	}
+	return nil
+}
+
+func (c *context) Status(code int, msg string) error {
+	if !c.resp.stop {
+		c.resp.statusCode = code
+		c.resp.statusMsg = msg
+		c.resp.stop = true
+	}
+	return nil
+}
+
+func (c *context) Error(code int, msg string) error {
+	c.Status(code, msg)
+	return errors.New(msg)
+}
+
+func (c *context) StatusBadRequest(msg string) error {
+	return c.httpError(StatusBadRequest, StatusBadRequest, msg)
+}
+
+func (c *context) StatusForbidden(msg string) error {
+	return c.httpError(StatusForbidden, StatusForbidden, msg)
+}
+func (c *context) StatusNotFound(msg string) error {
+	return c.httpError(StatusNotFound, StatusNotFound, msg)
+}
+
+func (c *context) StatusInternalServerError(msg string) error {
+	return c.httpError(StatusInternalServerError, StatusInternalServerError, msg)
+}
+
+func (c *context) StatusServiceUnavailable(msg string) error {
+	return c.httpError(StatusServiceUnavailable, StatusServiceUnavailable, msg)
+}
+
+func (c *context) httpError(httpCode, statusCode int, msg string) error {
+	c.Response().SetStatusCode(statusCode)
+	return c.Error(statusCode, msg)
+}
+
+func (c *context) Tx() (*db.Tx, error) {
+	c.lockCn.Lock()
+	defer c.lockCn.Unlock()
+	cn := c.s.Database()
+	if cn != nil && c.tx == nil {
+		tx, e := cn.Begin()
+		if e != nil { //db error
+			c.setErr(e)
+			return nil, c.StatusServiceUnavailable(`Service unavailable`)
+		}
+		c.tx = tx
+	}
+	return c.tx, nil
+}
+
+func (c *context) URL() *url.URL {
+	return c.req.URL()
+}
+
+func (c *context) Method() string {
+	return c.req.Method()
+}
+
+func (c *context) ContentType() string {
+	return c.req.Header().Get(`Content-Type`)
 }
 
 //Session ..
@@ -46,7 +158,6 @@ func (c *context) Session() Session {
 func (c *context) Request() Request {
 	return &c.req
 }
-
 func (c *context) Response() Response {
 	return &c.resp
 }
@@ -58,36 +169,18 @@ func (c *context) GetValue(name string) interface{} {
 	return c.values[name]
 }
 
-func (c *context) Tx() *db.Tx {
-	return c.tx
-}
-
-func (c *context) begin() error {
-	c.lockCn.Lock()
-	defer c.lockCn.Unlock()
-	if c.cn != nil {
-		tx, e := c.cn.Begin()
-		if e != nil { //db error
-			return e
-		}
-		c.tx = tx
+func (c *context) closeTx() {
+	if c.tx == nil {
+		return
 	}
-	return nil
-}
-func (c *context) rollback() {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
-	if c.tx != nil {
+	if c.resp.err != nil {
 		c.tx.Rollback()
-		c.tx = nil
-	}
-}
-func (c *context) commit() {
-	c.lockCn.Lock()
-	defer c.lockCn.Unlock()
-	if c.tx != nil {
+	} else {
 		c.tx.Commit()
 	}
+	c.tx = nil
 }
 
 func (c *context) put(property string, value interface{}) {
@@ -97,26 +190,33 @@ func (c *context) put(property string, value interface{}) {
 		}
 		c.vars.Put(property[1:], value)
 	} else { //save to result
-		c.resp.JSON().Put(property, value)
+		if c.resp.data == nil {
+			c.resp.data = json.Object{}
+		}
+		c.resp.data.Put(property, value)
 	}
 }
 
-func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *db.Connection) (*context, error) {
+func (c *context) setErr(err error) {
+	if c.resp.err == nil {
+		c.resp.err = err
+	}
+}
+
+func (c *context) logger() *logger {
+	return c.s.logger
+}
+
+func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response) (*context, error) {
 	ctx := &context{
 		s:      s,
-		req:    request{httpReq: req},
-		resp:   response{httpResp: resp},
-		cn:     cn,
 		values: make(map[string]interface{}),
 		sess:   &session{},
 		lockCn: sync.Mutex{},
 	}
-	url, e := url.Parse(string(req.URI().FullURI()))
-	if url == nil {
-		return nil, errors.Wrap(e, `invalid url `+string(req.RequestURI()))
-	}
-	ctx.req.url = url
-	ctx.req.body = req.Body()
+
+	req.CopyTo(&ctx.req.httpReq)
+	resp.CopyTo(&ctx.resp.httpResp)
 
 	return ctx, nil
 }

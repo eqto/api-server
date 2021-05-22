@@ -169,7 +169,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 				return nil, errors.New(`Duplicate entry`)
 			}
 		}
-		ctx.s.logE(err)
+		ctx.logger().E(err)
 		return nil, errExecutingQuery
 	}
 	switch q.qType {
@@ -211,7 +211,7 @@ func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interfac
 	return values, nil
 }
 
-func (q *actionQuery) execute(ctx *context) (interface{}, error) {
+func (q *actionQuery) execute(ctx *context) error {
 	if q.arrayName != `` { //execute array
 		result := []interface{}{}
 
@@ -220,11 +220,11 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 			for _, obj := range objs {
 				values, e := q.populateValues(ctx, obj)
 				if e != nil {
-					return nil, e
+					return e
 				}
 				r, e := q.executeItem(ctx, values)
 				if e != nil {
-					return nil, e
+					return e
 				}
 				if recs, ok := r.([]db.Resultset); ok {
 					for _, rec := range recs {
@@ -238,11 +238,11 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 			for _, val := range arr {
 				values, e := q.populateValues(ctx, val)
 				if e != nil {
-					return nil, e
+					return e
 				}
 				r, e := q.executeItem(ctx, values)
 				if e != nil {
-					return nil, e
+					return e
 				}
 				if recs, ok := r.([]db.Resultset); ok {
 					for _, rec := range recs {
@@ -253,16 +253,20 @@ func (q *actionQuery) execute(ctx *context) (interface{}, error) {
 				}
 			}
 		}
-		return result, nil
+		return ctx.Write(result)
 	}
 	values, e := q.populateValues(ctx, nil)
 	if e != nil {
-		return nil, e
+		return e
 	}
-	return q.executeItem(ctx, values)
+	r, e := q.executeItem(ctx, values)
+	if e != nil {
+		return e
+	}
+	return ctx.Write(r)
 }
 
-func newQueryAction(query, property, params string) (*actionQuery, error) {
+func newQueryAction(property, query, params string) (*actionQuery, error) {
 	act := &actionQuery{rawQuery: query, qProperty: property}
 
 	str := strings.SplitN(query, ` `, 2)

@@ -30,23 +30,15 @@ func postprocessResponse(resp *fasthttp.Response) {
 	resp.Header.Del("Connection")
 }
 
-func (p *proxy) execute(s *Server, ctx *context) error {
-	prepareRequest(ctx.req.httpReq)
-	if e := p.client.DoTimeout(ctx.req.httpReq, ctx.resp.httpResp, 60*time.Second); e != nil {
+func (p *proxy) execute(s *Server, fastCtx *fasthttp.RequestCtx) error {
+	req, resp := &fastCtx.Request, &fastCtx.Response
+
+	prepareRequest(req)
+	if e := p.client.DoTimeout(req, resp, 60*time.Second); e != nil {
 		return e
 	}
-	postprocessResponse(ctx.resp.httpResp)
+	postprocessResponse(resp)
 	return nil
-
-	//TODO used when responsemiddleware implemented
-	// httpResp := fasthttp.AcquireResponse()
-	// defer fasthttp.ReleaseResponse(httpResp)
-	// if e := p.client.DoTimeout(ctx.req.httpReq, httpResp, 60*time.Second); e != nil {
-	// 	ctx.resp.setError(StatusBadGateway, e)
-	// 	return e
-	// }
-	// httpResp.CopyTo(ctx.resp.httpResp)
-	// return nil
 }
 
 func newProxy(path, dest string) (proxy, error) {

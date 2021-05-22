@@ -1,14 +1,12 @@
 package api
 
 import (
+	"errors"
 	"fmt"
-	"strings"
+	"log"
 	"time"
 
 	"github.com/eqto/go-db"
-	"github.com/eqto/go-json"
-	log "github.com/eqto/go-logger"
-	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 )
 
@@ -20,10 +18,7 @@ type Server struct {
 	proxies  []proxy
 	files    []file
 
-	defaultContentType string
-	normalize          bool
-
-	isProduction bool
+	normalize bool
 
 	cn                 *db.Connection
 	dbConnected        bool
@@ -31,9 +26,7 @@ type Server struct {
 	middlewares        []*middlewareContainer
 	finalHandler       []func(ctx Context)
 
-	logD func(v ...interface{})
-	logW func(v ...interface{})
-	logE func(v ...interface{})
+	logger *logger
 
 	stdGroup *Group
 }
@@ -109,62 +102,20 @@ func (s *Server) FileRouteRemove(path string) error {
 	return nil
 }
 
-//SetRoute ...
-func (s *Server) SetRoute(method, path string, route *Route) {
-	if s.routeMap == nil {
-		s.routeMap = make(map[string]map[string]*Route)
-		s.routeMap[MethodGet] = make(map[string]*Route)
-		s.routeMap[MethodPost] = make(map[string]*Route)
-	}
-	if s.normalize {
-		path = normalizePath(path)
-	}
-	s.routeMap[method][path] = route
-	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
+func (s *Server) PostAction(f func(Context) error) *Route {
+	return s.defGroup().PostAction(f)
 }
 
-//Func add route with single func action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) Func(f func(Context) (interface{}, error)) (*Route, error) {
-	return s.defGroup().Func(f)
+func (s *Server) PostSecureAction(f func(Context) error) *Route {
+	return s.defGroup().PostSecureAction(f)
 }
 
-//FuncSecure ..
-func (s *Server) FuncSecure(f func(Context) (interface{}, error)) (*Route, error) {
-	return s.defGroup().FuncSecure(f)
+func (s *Server) Get(path string) *Route {
+	return s.defGroup().Get(path)
 }
 
-//Post ..
-func (s *Server) Post(path string, f func(Context) (interface{}, error)) *Route {
-	return s.defGroup().Post(path, f)
-}
-
-//PostSecure ..
-func (s *Server) PostSecure(path string, f func(Context) (interface{}, error)) *Route {
-	return s.defGroup().PostSecure(path, f)
-}
-
-//Query add route with single query action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) Query(path, query, params string) (*Route, error) {
-	return s.defGroup().Query(path, query, params)
-}
-
-//QuerySecure ..
-func (s *Server) QuerySecure(path, query, params string) (*Route, error) {
-	return s.defGroup().QuerySecure(path, query, params)
-}
-
-//Get ..
-func (s *Server) Get(path string, f func(Context) (interface{}, error)) *Route {
-	return s.defGroup().Get(path, f)
-}
-
-//GetRoute ...
-func (s *Server) GetRoute(method, path string) (*Route, error) {
-	method = strings.ToUpper(method)
-	if r, ok := s.routeMap[method][path]; ok {
-		return r, nil
-	}
-	return nil, fmt.Errorf(`route %s %s not found`, method, path)
+func (s *Server) Post(path string) *Route {
+	return s.defGroup().Post(path)
 }
 
 //NormalizeFunc if yes from this and beyond all Func added will renamed to lowercase, separated with underscore. Ex: HelloWorld registered as hello_world
@@ -172,93 +123,89 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
-func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
-	defer func() {
-		if r := recover(); r != nil {
-			ctx.resp.json = json.Object{}
-			if e, ok := r.(error); ok {
-				ctx.resp.setError(StatusInternalServerError, e)
-			} else {
-				ctx.resp.setError(StatusInternalServerError, errors.New(`unknown error`))
-			}
-		}
-	}()
-	path := ctx.req.url.Path
-	if e := ctx.begin(); e != nil {
-		ctx.resp.setError(StatusInternalServerError, e)
-		return e
+func (s *Server) executeRoutes(ctx *context, path string) bool {
+	route, ok := s.routeMap[ctx.Method()][path]
+	if !ok {
+		return false
 	}
-	defer func() {
-		if ctx.resp.err != nil {
-			ctx.rollback()
-		} else {
-			ctx.commit()
-		}
-	}()
-
-	if route, e := s.GetRoute(ctx.req.Method(), path); e == nil {
-		for _, m := range s.middlewares {
-			if m.group == `` || m.group == route.group {
-				if !m.secure || (m.secure && route.secure) {
-					if e := m.f(ctx); e != nil {
-						ctx.resp.json = json.Object{}
-						if m.secure {
-							ctx.resp.setError(StatusUnauthorized, e)
-						} else {
-							ctx.resp.setError(StatusInternalServerError, e)
-						}
-						return e
-					}
-				}
-			}
-		}
-
-		if e := route.execute(s, ctx); e != nil {
-			ctx.resp.json = json.Object{}
-			ctx.resp.setError(StatusInternalServerError, e)
-			return e
-		}
-		return nil
+	if route == nil {
+		return false
 	}
+	// for _, m := range s.middlewares {
+	// 	if m.group == `` || m.group == route.group {
+	// 		if !m.secure || (m.secure && route.secure) {
+	// 			if e := m.f(ctx); e != nil {
+	// 				ctx.resp.json = json.Object{}
+	// 				if m.secure {
+	// 					ctx.resp.setError(StatusUnauthorized, e)
+	// 				} else {
+	// 					ctx.resp.setError(StatusInternalServerError, e)
+	// 				}
+	// 				return true
+	// 			}
+	// 		}
+	// 	}
+	// }
+
+	if e := route.execute(s, ctx); e != nil {
+		ctx.setErr(e)
+		ctx.StatusServiceUnavailable(`Service offline, please try again later.`)
+	}
+	ctx.closeTx()
+	return true
+}
+
+func (s *Server) executeProxies(ctx *context, fastCtx *fasthttp.RequestCtx, path string) bool {
 	for _, proxy := range s.proxies {
 		if proxy.match(string(path)) {
-			if e := proxy.execute(s, ctx); e != nil {
-				ctx.resp.setError(StatusInternalServerError, e)
-				return e
+			if e := proxy.execute(s, fastCtx); e != nil {
+				ctx.setErr(e)
+				ctx.StatusInternalServerError(`Unable to execute proxy`)
 			}
-			return nil
+			return true
 		}
 	}
+	return false
+}
+
+func (s *Server) executeFiles(fastCtx *fasthttp.RequestCtx, path string) bool {
 	for _, file := range s.files {
 		if file.match(string(path)) {
 			file.handler(fastCtx)
-			return nil
+			return true
 		}
 	}
-	ctx.resp.setError(StatusNotFound, errors.New(`route `+path+` not found`))
-	return ctx.resp.err
+	return false
 }
 
 //Serve ..
 func (s *Server) Serve(port int) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
-		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response, s.cn)
+		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response)
 		if e != nil {
-			s.logW(e)
+			s.logger.W(e)
 			fastCtx.WriteString(e.Error())
 			return
 		}
-		s.execute(fastCtx, ctx)
+
+		path := ctx.URL().Path
+
+		if ok := s.executeRoutes(ctx, path); !ok {
+			if ok := s.executeProxies(ctx, fastCtx, path); !ok {
+				if ok := s.executeFiles(fastCtx, path); !ok {
+					ctx.setErr(errors.New(`route ` + path + ` not found`))
+					ctx.StatusServiceUnavailable(`route ` + path + ` not found`)
+				}
+			}
+		}
 
 		for _, h := range s.finalHandler {
 			h(ctx)
 		}
-		if ctx.resp.json != nil {
-			ctx.resp.httpResp.Header.Set(`Content-type`, `application/json`)
-			ctx.resp.json.Put(`status`, ctx.resp.getStatus())
-			ctx.resp.json.Put(`message`, ctx.resp.getMessage())
 
-			fastCtx.Write(ctx.resp.json.ToBytes())
+		if ctx.resp.data != nil {
+			ctx.resp.SetContentType(`application/json`)
+			fastCtx.Write(ctx.resp.Body())
 		}
 	}
 	if s.serv != nil {
@@ -291,21 +238,9 @@ func (s *Server) Shutdown() error {
 	return nil
 }
 
-//SetProduction ...
-func (s *Server) SetProduction() {
-	s.isProduction = true
-}
-
-//SetDebug ...
-func (s *Server) SetDebug() {
-	s.isProduction = false
-}
-
 //SetLogger ...
-func (s *Server) SetLogger(debug func(...interface{}), warn func(...interface{}), err func(...interface{})) {
-	s.logD = debug
-	s.logW = warn
-	s.logE = err
+func (s *Server) SetLogger(debug func(...interface{}), info func(...interface{}), warn func(...interface{}), err func(...interface{})) {
+	s.logger = &logger{D: debug, I: info, W: warn, E: err}
 }
 
 //Group ..
@@ -320,37 +255,13 @@ func (s *Server) defGroup() *Group {
 	return s.stdGroup
 }
 
-func (s *Server) routeMethod(method, path string) (int8, error) {
-	switch method {
-	case MethodGet:
-		return routeMethodGet, nil
-	case MethodPost:
-		return routeMethodPost, nil
-	default:
-		return 0, fmt.Errorf(`unrecognized method %s, choose between api.MethodGet or api.MethodPost`, method)
-	}
-}
-
-func (s *Server) debug(v ...interface{}) {
-	if !s.isProduction {
-		s.logD(v...)
-	}
-}
-func (s *Server) warn(v ...interface{}) {
-	s.logW(v...)
-}
-func (s *Server) error(v ...interface{}) {
-	s.logW(v...)
-}
-
 //New ...
 func New() *Server {
 	s := &Server{
 		routeMap: make(map[string]map[string]*Route),
-		logD:     log.Println,
-		logW:     log.Println,
-		logE:     log.Println,
 	}
+	s.SetLogger(log.Println, log.Println, log.Println, log.Println)
+
 	s.routeMap[MethodGet] = make(map[string]*Route)
 	s.routeMap[MethodPost] = make(map[string]*Route)
 	return s
