@@ -47,7 +47,6 @@ type Context interface {
 
 type context struct {
 	Context
-	method string
 
 	s *Server
 

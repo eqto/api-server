@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/eqto/go-db"
@@ -103,62 +102,20 @@ func (s *Server) FileRouteRemove(path string) error {
 	return nil
 }
 
-//SetRoute ...
-func (s *Server) SetRoute(method, path string, route *Route) {
-	if s.routeMap == nil {
-		s.routeMap = make(map[string]map[string]*Route)
-		s.routeMap[MethodGet] = make(map[string]*Route)
-		s.routeMap[MethodPost] = make(map[string]*Route)
-	}
-	if s.normalize {
-		path = normalizePath(path)
-	}
-	s.routeMap[method][path] = route
-	s.logger.D(fmt.Sprintf(`add route %s %s`, method, path))
+func (s *Server) PostAction(f func(Context) error) *Route {
+	return s.defGroup().PostAction(f)
 }
 
-//Func add route with single func action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) Func(f func(Context) error) (*Route, error) {
-	return s.defGroup().Func(f)
+func (s *Server) PostSecureAction(f func(Context) error) *Route {
+	return s.defGroup().PostSecureAction(f)
 }
 
-//FuncSecure ..
-func (s *Server) FuncSecure(f func(Context) error) (*Route, error) {
-	return s.defGroup().FuncSecure(f)
+func (s *Server) Get(path string) *Route {
+	return s.defGroup().Get(path)
 }
 
-//Post ..
-func (s *Server) Post(path string, f func(Context) error) *Route {
-	return s.defGroup().Post(path, f)
-}
-
-//PostSecure ..
-func (s *Server) PostSecure(path string, f func(Context) error) *Route {
-	return s.defGroup().PostSecure(path, f)
-}
-
-//Query add route with single query action. When secure is true, this route will validated using auth middlewares if any.
-func (s *Server) Query(path, query, params string) (*Route, error) {
-	return s.defGroup().Query(path, query, params)
-}
-
-//QuerySecure ..
-func (s *Server) QuerySecure(path, query, params string) (*Route, error) {
-	return s.defGroup().QuerySecure(path, query, params)
-}
-
-//Get ..
-func (s *Server) Get(path string, f func(Context) error) *Route {
-	return s.defGroup().Get(path, f)
-}
-
-//GetRoute ...
-func (s *Server) GetRoute(method, path string) (*Route, bool) {
-	method = strings.ToUpper(method)
-	if r, ok := s.routeMap[method][path]; ok {
-		return r, true
-	}
-	return nil, false
+func (s *Server) Post(path string) *Route {
+	return s.defGroup().Post(path)
 }
 
 //NormalizeFunc if yes from this and beyond all Func added will renamed to lowercase, separated with underscore. Ex: HelloWorld registered as hello_world
@@ -167,8 +124,11 @@ func (s *Server) NormalizeFunc(n bool) {
 }
 
 func (s *Server) executeRoutes(ctx *context, path string) bool {
-	route, ok := s.GetRoute(ctx.Method(), path)
+	route, ok := s.routeMap[ctx.Method()][path]
 	if !ok {
+		return false
+	}
+	if route == nil {
 		return false
 	}
 	// for _, m := range s.middlewares {

@@ -4,9 +4,9 @@ import "github.com/valyala/fasthttp"
 
 const (
 	//MethodGet GET
-	MethodGet string = `GET`
+	MethodGet string = fasthttp.MethodGet
 	//MethodPost POST
-	MethodPost string = `POST`
+	MethodPost string = fasthttp.MethodPost
 
 	//StatusBadRequest ...
 	StatusBadRequest = fasthttp.StatusBadRequest

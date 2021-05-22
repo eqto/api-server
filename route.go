@@ -5,6 +5,8 @@ type Route struct {
 	action []Action
 	secure bool
 	group  string
+
+	logger *logger
 }
 
 //Secure ...
@@ -20,20 +22,23 @@ func (r *Route) UseGroup(name string) *Route {
 }
 
 //AddQueryAction ...
-func (r *Route) AddQueryAction(query, params, property string) (Action, error) {
-	act, e := newQueryAction(query, property, params)
+func (r *Route) AddQueryAction(property, query, params string) *Route {
+	act, e := newQueryAction(property, query, params)
 	if e != nil {
-		return nil, e
+		if r.logger != nil {
+			r.logger.W(e)
+		}
+		return r
 	}
 	r.action = append(r.action, act)
-	return act, nil
+	return r
 }
 
-//AddFuncAction ...
-func (r *Route) AddFuncAction(f func(Context) error, property string) Action {
+//AddAction ...
+func (r *Route) AddAction(property string, f func(Context) error) *Route {
 	act := newFuncAction(f, property)
 	r.action = append(r.action, act)
-	return act
+	return r
 }
 
 func (r *Route) execute(s *Server, ctx *context) error {

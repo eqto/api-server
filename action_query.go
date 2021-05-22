@@ -266,7 +266,7 @@ func (q *actionQuery) execute(ctx *context) error {
 	return ctx.Write(r)
 }
 
-func newQueryAction(query, property, params string) (*actionQuery, error) {
+func newQueryAction(property, query, params string) (*actionQuery, error) {
 	act := &actionQuery{rawQuery: query, qProperty: property}
 
 	str := strings.SplitN(query, ` `, 2)
