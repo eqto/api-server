@@ -17,33 +17,40 @@ func (r *RequestHeader) Get(key string) string {
 	return ``
 }
 
-//GetOrNil ..
-func (r *RequestHeader) GetOrNil(key string) *string {
-	if val := r.httpHeader.Peek(key); val != nil {
-		str := string(val)
-		return &str
-	}
-	return nil
-}
-
 func (r *RequestHeader) Bytes() []byte {
-	if r.httpHeader == nil {
-		return []byte{}
-	}
 	return r.httpHeader.Header()
 }
 
 //ResponseHeader ...
 type ResponseHeader struct {
-	resp *fasthttp.Response
+	httpHeader *fasthttp.ResponseHeader
+}
+
+func (r *ResponseHeader) SetCookie(key, value string, expire int) {
+	ck := &fasthttp.Cookie{}
+	ck.SetKey(key)
+	ck.SetValue(value)
+	ck.SetMaxAge(expire)
+	ck.SetHTTPOnly(true)
+	ck.SetPath(`/`)
+	r.httpHeader.SetCookie(ck)
 }
 
 //Add ..
 func (r *ResponseHeader) Add(key, value string) {
-	r.resp.Header.Add(key, value)
+	r.httpHeader.Add(key, value)
 }
 
 //Set ..
 func (r *ResponseHeader) Set(key, value string) {
-	r.resp.Header.Set(key, value)
+	r.httpHeader.Set(key, value)
+}
+
+//Get ..
+func (r *ResponseHeader) Get(key string) string {
+	if val := r.httpHeader.Peek(key); val != nil {
+		return string(val)
+	}
+	return ``
+
 }

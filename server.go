@@ -1,14 +1,13 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/eqto/go-db"
-	"github.com/eqto/go-json"
-	"github.com/pkg/errors"
 	"github.com/valyala/fasthttp"
 )
 
@@ -172,35 +171,36 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 	if !ok {
 		return false
 	}
-	for _, m := range s.middlewares {
-		if m.group == `` || m.group == route.group {
-			if !m.secure || (m.secure && route.secure) {
-				if e := m.f(ctx); e != nil {
-					ctx.resp.json = json.Object{}
-					if m.secure {
-						ctx.resp.setError(StatusUnauthorized, e)
-					} else {
-						ctx.resp.setError(StatusInternalServerError, e)
-					}
-					return true
-				}
-			}
-		}
-	}
+	// for _, m := range s.middlewares {
+	// 	if m.group == `` || m.group == route.group {
+	// 		if !m.secure || (m.secure && route.secure) {
+	// 			if e := m.f(ctx); e != nil {
+	// 				ctx.resp.json = json.Object{}
+	// 				if m.secure {
+	// 					ctx.resp.setError(StatusUnauthorized, e)
+	// 				} else {
+	// 					ctx.resp.setError(StatusInternalServerError, e)
+	// 				}
+	// 				return true
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	if e := route.execute(s, ctx); e != nil {
-		ctx.resp.json = json.Object{}
-		ctx.resp.setError(StatusInternalServerError, e)
+		ctx.setErr(e)
+		ctx.StatusServiceUnavailable(`Service offline, please try again later.`)
 	}
 	ctx.closeTx()
 	return true
 }
 
-func (s *Server) executeProxies(ctx *context, path string) bool {
+func (s *Server) executeProxies(ctx *context, fastCtx *fasthttp.RequestCtx, path string) bool {
 	for _, proxy := range s.proxies {
 		if proxy.match(string(path)) {
-			if e := proxy.execute(s, ctx); e != nil {
-				ctx.resp.setError(StatusInternalServerError, e)
+			if e := proxy.execute(s, fastCtx); e != nil {
+				ctx.setErr(e)
+				ctx.StatusInternalServerError(`Unable to execute proxy`)
 			}
 			return true
 		}
@@ -208,10 +208,10 @@ func (s *Server) executeProxies(ctx *context, path string) bool {
 	return false
 }
 
-func (s *Server) executeFiles(ctx *context, path string) bool {
+func (s *Server) executeFiles(fastCtx *fasthttp.RequestCtx, path string) bool {
 	for _, file := range s.files {
 		if file.match(string(path)) {
-			file.handler(ctx.fastCtx)
+			file.handler(fastCtx)
 			return true
 		}
 	}
@@ -221,7 +221,7 @@ func (s *Server) executeFiles(ctx *context, path string) bool {
 //Serve ..
 func (s *Server) Serve(port int) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
-		ctx, e := newContext(s, fastCtx)
+		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response)
 		if e != nil {
 			s.logger.W(e)
 			fastCtx.WriteString(e.Error())
@@ -231,9 +231,10 @@ func (s *Server) Serve(port int) error {
 		path := ctx.URL().Path
 
 		if ok := s.executeRoutes(ctx, path); !ok {
-			if ok := s.executeProxies(ctx, path); !ok {
-				if ok := s.executeFiles(ctx, path); !ok {
-					ctx.resp.setError(StatusNotFound, errors.New(`route `+path+` not found`))
+			if ok := s.executeProxies(ctx, fastCtx, path); !ok {
+				if ok := s.executeFiles(fastCtx, path); !ok {
+					ctx.setErr(errors.New(`route ` + path + ` not found`))
+					ctx.StatusServiceUnavailable(`route ` + path + ` not found`)
 				}
 			}
 		}
@@ -241,12 +242,10 @@ func (s *Server) Serve(port int) error {
 		for _, h := range s.finalHandler {
 			h(ctx)
 		}
-		if ctx.resp.json != nil {
-			ctx.resp.fastResp().Header.Set(`Content-type`, `application/json`)
-			ctx.resp.json.Put(`status`, ctx.resp.getStatus())
-			ctx.resp.json.Put(`message`, ctx.resp.getMessage())
 
-			fastCtx.Write(ctx.resp.json.ToBytes())
+		if ctx.resp.data != nil {
+			ctx.resp.SetContentType(`application/json`)
+			fastCtx.Write(ctx.resp.Body())
 		}
 	}
 	if s.serv != nil {

@@ -37,22 +37,25 @@ func (r *Route) AddFuncAction(f func(Context) error, property string) Action {
 }
 
 func (r *Route) execute(s *Server, ctx *context) error {
-	if s.routeAuthenticator != nil {
-		for _, m := range s.routeAuthenticator {
-			if r.secure {
-				if e := m(ctx); e != nil {
-					ctx.resp.setError(StatusUnauthorized, e)
-					return e
-				}
-			}
-		}
-	}
+	// if s.routeAuthenticator != nil {
+	// 	for _, m := range s.routeAuthenticator {
+	// 		if r.secure {
+	// 			if e := m(ctx); e != nil {
+	// 				ctx.resp.setError(StatusUnauthorized, e)
+	// 				return e
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	for _, action := range r.action {
 		ctx.property = action.property()
 		if e := action.execute(ctx); e != nil {
-			ctx.resp.setError(StatusServiceUnavailable, e)
+			ctx.setErr(e)
 			return e
+		}
+		if ctx.resp.stop {
+			return nil
 		}
 	}
 	return nil

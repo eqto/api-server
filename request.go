@@ -10,6 +10,7 @@ import (
 //Request ..
 type Request interface {
 	Header() *RequestHeader
+	Method() string
 	URL() *url.URL
 	JSON() json.Object
 	Body() []byte
@@ -17,24 +18,22 @@ type Request interface {
 
 type request struct {
 	Request
-	fastCtx *fasthttp.RequestCtx
+	httpReq fasthttp.Request
 	js      json.Object
 	url     *url.URL
 }
 
-func (r *request) fastReq() *fasthttp.Request {
-	return &r.fastCtx.Request
+func (r *request) Method() string {
+	return string(r.httpReq.Header.Method())
 }
 
 func (r *request) Header() *RequestHeader {
-	header := &RequestHeader{httpHeader: &fasthttp.RequestHeader{}}
-	r.fastReq().Header.CopyTo(header.httpHeader)
-	return header
+	return &RequestHeader{&r.httpReq.Header}
 }
 
 func (r *request) URL() *url.URL {
 	if r.url == nil {
-		u, e := url.Parse(string(r.fastReq().URI().FullURI()))
+		u, e := url.Parse(string(r.httpReq.URI().FullURI()))
 		if e != nil {
 			return &url.URL{}
 		}
@@ -59,7 +58,7 @@ func (r *request) JSON() json.Object {
 }
 
 func (r *request) Body() []byte {
-	return r.fastReq().Body()
+	return r.httpReq.Body()
 }
 
 func (r *request) get(key string) interface{} {
