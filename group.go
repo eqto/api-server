@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+var (
+	normalizeRegex *regexp.Regexp
+)
+
 //Group ..
 type Group struct {
 	s    *Server
@@ -55,10 +59,7 @@ func (g *Group) action(method string, f func(Context) error) *Route {
 		return &Route{logger: g.s.logger}
 	}
 	path := strings.ReplaceAll(name, `.`, `/`)
-	if g.s.normalize {
-		path = normalizePath(path)
-	}
-	route := g.getRoute(method, path)
+	route := g.getRoute(method, `/`+path)
 	return route.AddAction(`data`, f)
 }
 
@@ -67,6 +68,9 @@ func (g *Group) getRoute(method, path string) *Route {
 	case MethodGet, MethodPost:
 	default:
 		return nil
+	}
+	if g.s.normalize {
+		path = normalizePath(path)
 	}
 	route, ok := g.s.routeMap[method][path]
 	if !ok {
@@ -79,8 +83,10 @@ func (g *Group) getRoute(method, path string) *Route {
 }
 
 func normalizePath(path string) string {
-	regex := regexp.MustCompile(`([A-Z]+)`)
-	path = regex.ReplaceAllString(path, `_$1`)
+	if normalizeRegex == nil {
+		normalizeRegex = regexp.MustCompile(`([A-Z]+)`)
+	}
+	path = normalizeRegex.ReplaceAllString(path, `_$1`)
 	path = strings.ToLower(path)
 	validPath := false
 	if strings.HasPrefix(path, `/`) {
