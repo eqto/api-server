@@ -64,7 +64,6 @@ func (r *response) Body() []byte {
 
 func (r *response) SetBody(body []byte) {
 	r.httpResp.SetBody(body)
-	// r.body = body
 }
 
 func (r *response) put(key string, value interface{}) {
