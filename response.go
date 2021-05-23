@@ -8,8 +8,11 @@ import (
 type Response interface {
 	ContentType() string
 	SetContentType(contentType string)
+	StatusCode() int
+	StatusMessage() string
 	SetStatusCode(statusCode int)
 	Header() *ResponseHeader
+	Data() json.Object
 	Body() []byte
 	SetBody(body []byte)
 }
@@ -19,8 +22,7 @@ type response struct {
 	statusMsg  string
 	data       json.Object
 
-	httpResp fasthttp.Response
-	body     []byte
+	httpResp *fasthttp.Response
 	err      error
 	stop     bool
 }
@@ -41,15 +43,32 @@ func (r *response) SetStatusCode(statusCode int) {
 	r.statusCode = statusCode
 }
 
-func (r *response) Body() []byte {
-	if r.data != nil {
-		js := r.data.Clone()
-		js.Put(`status`, r.statusCode).Put(`message`, r.statusMsg)
-		return js.ToBytes()
+func (r *response) StatusCode() int {
+	return r.statusCode
+}
+
+func (r *response) StatusMessage() string {
+	return r.statusMsg
+}
+
+func (r *response) Data() json.Object {
+	if r.data == nil {
+		return nil
 	}
-	return nil
+	return r.data.Clone()
+}
+
+func (r *response) Body() []byte {
+	return r.httpResp.Body()
 }
 
 func (r *response) SetBody(body []byte) {
-	r.body = body
+	r.httpResp.SetBody(body)
+}
+
+func (r *response) put(key string, value interface{}) {
+	if r.data == nil {
+		r.data = json.Object{}
+	}
+	r.data.Put(key, value)
 }

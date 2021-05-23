@@ -20,11 +20,10 @@ type Server struct {
 
 	normalize bool
 
-	cn                 *db.Connection
-	dbConnected        bool
-	routeAuthenticator []RouteAuthenticator
-	middlewares        []*middlewareContainer
-	finalHandler       []func(ctx Context)
+	cn          *db.Connection
+	dbConnected bool
+	middlewares []*middlewareContainer
+	render      Render
 
 	logger *logger
 
@@ -61,14 +60,13 @@ func (s *Server) AddMiddleware(f func(Context) error) Middleware {
 	return s.defGroup().AddMiddleware(f)
 }
 
-//AddFinalHandler ..
-func (s *Server) AddFinalHandler(f func(Context)) {
-	s.finalHandler = append(s.finalHandler, f)
-}
+// //AddFinalHandler ..
+// func (s *Server) AddFinalHandler(f func(Context)) {
+// 	s.finalHandler = append(s.finalHandler, f)
+// }
 
-//AddRouteAuthenticator ..
-func (s *Server) AddRouteAuthenticator(a RouteAuthenticator) {
-	s.routeAuthenticator = append(s.routeAuthenticator, a)
+func (s *Server) SetRender(r Render) {
+	s.render = r
 }
 
 //Proxy ...
@@ -131,21 +129,22 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 	if route == nil {
 		return false
 	}
-	// for _, m := range s.middlewares {
-	// 	if m.group == `` || m.group == route.group {
-	// 		if !m.secure || (m.secure && route.secure) {
-	// 			if e := m.f(ctx); e != nil {
-	// 				ctx.resp.json = json.Object{}
-	// 				if m.secure {
-	// 					ctx.resp.setError(StatusUnauthorized, e)
-	// 				} else {
-	// 					ctx.resp.setError(StatusInternalServerError, e)
-	// 				}
-	// 				return true
-	// 			}
-	// 		}
-	// 	}
-	// }
+	for _, m := range s.middlewares {
+		if m.group == `` || m.group == route.group {
+			if !m.secure || (m.secure && route.secure) {
+				if e := m.f(ctx); e != nil {
+					ctx.setErr(e)
+					if m.secure {
+						ctx.StatusUnauthorized(`Authorization error: ` + e.Error())
+					} else {
+						s.logger.W(e)
+						ctx.StatusInternalServerError(`Internal server error`)
+					}
+					return true
+				}
+			}
+		}
+	}
 
 	if e := route.execute(s, ctx); e != nil {
 		ctx.setErr(e)
@@ -190,6 +189,8 @@ func (s *Server) Serve(port int) error {
 
 		path := ctx.URL().Path
 
+		ctx.resp.SetContentType(`application/json`)
+
 		if ok := s.executeRoutes(ctx, path); !ok {
 			if ok := s.executeProxies(ctx, fastCtx, path); !ok {
 				if ok := s.executeFiles(fastCtx, path); !ok {
@@ -198,14 +199,12 @@ func (s *Server) Serve(port int) error {
 				}
 			}
 		}
-
-		for _, h := range s.finalHandler {
-			h(ctx)
+		renderOk := false
+		if s.render != nil {
+			renderOk = s.render(&ctx.req, &ctx.resp)
 		}
-
-		if ctx.resp.data != nil {
-			ctx.resp.SetContentType(`application/json`)
-			fastCtx.Write(ctx.resp.Body())
+		if !renderOk {
+			render(&ctx.req, &ctx.resp)
 		}
 	}
 	if s.serv != nil {

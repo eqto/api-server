@@ -93,9 +93,8 @@ func normalizePath(path string) string {
 		validPath = true
 		path = path[1:]
 	}
-	if strings.HasPrefix(path, `_`) {
-		path = path[1:]
-	}
+	path = strings.TrimPrefix(path, `_`)
+
 	if validPath {
 		path = `/` + path
 	}
