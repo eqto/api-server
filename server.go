@@ -20,11 +20,10 @@ type Server struct {
 
 	normalize bool
 
-	cn                 *db.Connection
-	dbConnected        bool
-	routeAuthenticator []RouteAuthenticator
-	middlewares        []*middlewareContainer
-	render             Render
+	cn          *db.Connection
+	dbConnected bool
+	middlewares []*middlewareContainer
+	render      Render
 
 	logger *logger
 
@@ -68,11 +67,6 @@ func (s *Server) AddMiddleware(f func(Context) error) Middleware {
 
 func (s *Server) SetRender(r Render) {
 	s.render = r
-}
-
-//AddRouteAuthenticator ..
-func (s *Server) AddRouteAuthenticator(a RouteAuthenticator) {
-	s.routeAuthenticator = append(s.routeAuthenticator, a)
 }
 
 //Proxy ...

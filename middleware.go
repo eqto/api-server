@@ -7,9 +7,6 @@ type Middleware interface {
 	Secure() Middleware
 }
 
-//RouteAuthenticator ..
-type RouteAuthenticator func(ctx Context) error
-
 //middlewareContainer
 type middlewareContainer struct {
 	Middleware

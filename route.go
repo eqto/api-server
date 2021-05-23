@@ -42,17 +42,6 @@ func (r *Route) AddAction(property string, f func(Context) error) *Route {
 }
 
 func (r *Route) execute(s *Server, ctx *context) error {
-	// if s.routeAuthenticator != nil {
-	// 	for _, m := range s.routeAuthenticator {
-	// 		if r.secure {
-	// 			if e := m(ctx); e != nil {
-	// 				ctx.resp.setError(StatusUnauthorized, e)
-	// 				return e
-	// 			}
-	// 		}
-	// 	}
-	// }
-
 	for _, action := range r.action {
 		ctx.property = action.property()
 		if e := action.execute(ctx); e != nil {
