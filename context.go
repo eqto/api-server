@@ -78,7 +78,6 @@ func (c *context) WriteBody(contentType string, body []byte) error {
 		if contentType != `` {
 			resp.SetContentType(contentType)
 		}
-		resp.Body()
 		resp.SetBody(body)
 		c.resp.stop = true
 	}
@@ -190,10 +189,7 @@ func (c *context) put(property string, value interface{}) {
 		}
 		c.vars.Put(property[1:], value)
 	} else { //save to result
-		if c.resp.data == nil {
-			c.resp.data = json.Object{}
-		}
-		c.resp.data.Put(property, value)
+		c.resp.put(property, value)
 	}
 }
 
@@ -214,9 +210,8 @@ func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response) (*con
 		sess:   &session{},
 		lockCn: sync.Mutex{},
 	}
-
 	req.CopyTo(&ctx.req.httpReq)
-	resp.CopyTo(&ctx.resp.httpResp)
+	ctx.resp.httpResp = resp
 
 	return ctx, nil
 }
