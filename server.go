@@ -180,7 +180,7 @@ func (s *Server) executeFiles(fastCtx *fasthttp.RequestCtx, path string) bool {
 //Serve ..
 func (s *Server) Serve(port int) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
-		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response)
+		ctx, e := newContext(s, fastCtx)
 		if e != nil {
 			s.logger.W(e)
 			fastCtx.WriteString(e.Error())

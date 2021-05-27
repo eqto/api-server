@@ -16,6 +16,7 @@ type Context interface {
 	URL() *url.URL
 	Method() string
 	ContentType() string
+	RemoteIP() string
 	Write(value interface{}) error
 
 	//WriteBody write to body and ignoring the next action
@@ -48,7 +49,8 @@ type Context interface {
 type context struct {
 	Context
 
-	s *Server
+	s       *Server
+	fastCtx *fasthttp.RequestCtx
 
 	property string
 
@@ -117,11 +119,6 @@ func (c *context) StatusServiceUnavailable(msg string) error {
 	return c.httpError(StatusServiceUnavailable, StatusServiceUnavailable, msg)
 }
 
-func (c *context) httpError(httpCode, statusCode int, msg string) error {
-	c.Response().SetStatusCode(statusCode)
-	return c.Error(statusCode, msg)
-}
-
 func (c *context) Tx() (*db.Tx, error) {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
@@ -168,6 +165,10 @@ func (c *context) GetValue(name string) interface{} {
 	return c.values[name]
 }
 
+func (c *context) RemoteIP() string {
+	return string(c.fastCtx.RemoteIP().String())
+}
+
 func (c *context) closeTx() {
 	if c.tx == nil {
 		return
@@ -180,6 +181,11 @@ func (c *context) closeTx() {
 		c.tx.Commit()
 	}
 	c.tx = nil
+}
+
+func (c *context) httpError(httpCode, statusCode int, msg string) error {
+	c.Response().SetStatusCode(statusCode)
+	return c.Error(statusCode, msg)
 }
 
 func (c *context) put(property string, value interface{}) {
@@ -203,15 +209,16 @@ func (c *context) logger() *logger {
 	return c.s.logger
 }
 
-func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response) (*context, error) {
+func newContext(s *Server, fastCtx *fasthttp.RequestCtx) (*context, error) {
 	ctx := &context{
-		s:      s,
-		values: make(map[string]interface{}),
-		sess:   &session{},
-		lockCn: sync.Mutex{},
+		s:       s,
+		values:  make(map[string]interface{}),
+		sess:    &session{},
+		lockCn:  sync.Mutex{},
+		fastCtx: fastCtx,
 	}
-	req.CopyTo(&ctx.req.httpReq)
-	ctx.resp.httpResp = resp
+	ctx.resp.httpResp = &fastCtx.Response
+	fastCtx.Request.CopyTo(&ctx.req.httpReq)
 
 	return ctx, nil
 }
