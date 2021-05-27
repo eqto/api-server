@@ -211,6 +211,9 @@ func (c *context) setErr(err error) {
 	if c.resp.data == nil {
 		c.resp.data = json.Object{}
 	}
+	if c.resp.statusCode == 0 {
+		c.Error(99, err.Error())
+	}
 }
 
 func (c *context) logger() *logger {
