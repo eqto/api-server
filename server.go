@@ -144,7 +144,6 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 
 	if e := route.execute(s, ctx); e != nil {
 		ctx.setErr(e)
-		ctx.StatusServiceUnavailable(`Service offline, please try again later.`)
 	} else if ctx.resp.data == nil {
 		ctx.resp.data = json.Object{}
 	}
