@@ -3,8 +3,6 @@ package api
 import (
 	"fmt"
 	"strconv"
-
-	log "github.com/eqto/go-logger"
 )
 
 //Session ...
@@ -18,7 +16,8 @@ type Session interface {
 
 type session struct {
 	Session
-	val map[string]interface{}
+	logger *logger
+	val    map[string]interface{}
 }
 
 func (s *session) init() {
@@ -54,7 +53,7 @@ func (s *session) GetString(key string) string {
 	case string:
 		return val
 	}
-	log.W(fmt.Sprintf(`unable convert to string key:%s val: %v`, key, val))
+	s.logger.W(fmt.Sprintf(`unable convert to string key:%s val: %v`, key, val))
 	return ``
 }
 
@@ -74,6 +73,6 @@ func (s *session) GetInt(key string) int {
 		}
 		return i
 	}
-	log.W(fmt.Sprintf(`unable convert to string int:%s val: %v`, key, val))
+	s.logger.W(fmt.Sprintf(`unable convert to string int:%s val: %v`, key, val))
 	return 0
 }

@@ -221,7 +221,7 @@ func newContext(s *Server, fastCtx *fasthttp.RequestCtx) (*context, error) {
 	ctx := &context{
 		s:       s,
 		values:  make(map[string]interface{}),
-		sess:    &session{},
+		sess:    &session{logger: s.logger},
 		lockCn:  sync.Mutex{},
 		fastCtx: fastCtx,
 	}
