@@ -104,19 +104,24 @@ func (c *context) StatusBadRequest(msg string) error {
 	return c.httpError(StatusBadRequest, StatusBadRequest, msg)
 }
 
+func (c *context) StatusUnauthorized(msg string) error {
+	return c.httpError(StatusUnauthorized, StatusUnauthorized, msg)
+}
+
 func (c *context) StatusForbidden(msg string) error {
 	return c.httpError(StatusForbidden, StatusForbidden, msg)
 }
+
 func (c *context) StatusNotFound(msg string) error {
 	return c.httpError(StatusNotFound, StatusNotFound, msg)
 }
 
-func (c *context) StatusInternalServerError(msg string) error {
-	return c.httpError(StatusInternalServerError, StatusInternalServerError, msg)
-}
-
 func (c *context) StatusServiceUnavailable(msg string) error {
 	return c.httpError(StatusServiceUnavailable, StatusServiceUnavailable, msg)
+}
+
+func (c *context) StatusInternalServerError(msg string) error {
+	return c.httpError(StatusInternalServerError, StatusInternalServerError, msg)
 }
 
 func (c *context) Tx() (*db.Tx, error) {
