@@ -189,7 +189,7 @@ func (c *context) closeTx() {
 }
 
 func (c *context) httpError(httpCode, statusCode int, msg string) error {
-	c.Response().SetStatusCode(statusCode)
+	c.resp.httpResp.SetStatusCode(httpCode)
 	return c.Error(statusCode, msg)
 }
 
@@ -207,6 +207,9 @@ func (c *context) put(property string, value interface{}) {
 func (c *context) setErr(err error) {
 	if c.resp.err == nil {
 		c.resp.err = err
+	}
+	if c.resp.data == nil {
+		c.resp.data = json.Object{}
 	}
 }
 
