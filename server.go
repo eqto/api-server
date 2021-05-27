@@ -61,11 +61,6 @@ func (s *Server) AddMiddleware(f func(Context) error) Middleware {
 	return s.defGroup().AddMiddleware(f)
 }
 
-// //AddFinalHandler ..
-// func (s *Server) AddFinalHandler(f func(Context)) {
-// 	s.finalHandler = append(s.finalHandler, f)
-// }
-
 func (s *Server) SetRender(r Render) {
 	s.render = r
 }
@@ -204,10 +199,10 @@ func (s *Server) Serve(port int) error {
 		}
 		renderOk := false
 		if s.render != nil {
-			renderOk = s.render(&ctx.req, &ctx.resp)
+			renderOk = s.render(ctx)
 		}
 		if !renderOk {
-			render(&ctx.req, &ctx.resp)
+			render(ctx)
 		}
 	}
 	if s.serv != nil {
