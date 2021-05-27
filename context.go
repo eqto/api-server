@@ -198,7 +198,16 @@ func (c *context) put(property string, value interface{}) {
 		if c.vars == nil {
 			c.vars = json.Object{}
 		}
-		c.vars.Put(property[1:], value)
+		if property == `$` {
+			if js, e := json.ParseObject(value); e == nil {
+				if c.resp.data == nil {
+					c.resp.data = json.Object{}
+				}
+				js.CopyTo(&c.resp.data)
+			}
+		} else {
+			c.vars.Put(property[1:], value)
+		}
 	} else { //save to result
 		c.resp.put(property, value)
 	}
