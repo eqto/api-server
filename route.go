@@ -45,7 +45,6 @@ func (r *Route) execute(s *Server, ctx *context) error {
 	for _, action := range r.action {
 		ctx.property = action.property()
 		if e := action.execute(ctx); e != nil {
-			ctx.setErr(e)
 			return e
 		}
 		if ctx.resp.stop {
