@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/eqto/go-db"
+	"github.com/eqto/go-json"
 	"github.com/valyala/fasthttp"
 )
 
@@ -149,6 +150,8 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 	if e := route.execute(s, ctx); e != nil {
 		ctx.setErr(e)
 		ctx.StatusServiceUnavailable(`Service offline, please try again later.`)
+	} else if ctx.resp.data == nil {
+		ctx.resp.data = json.Object{}
 	}
 	ctx.closeTx()
 	return true
