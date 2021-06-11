@@ -42,6 +42,16 @@ func (r *Route) AddAction(property string, f func(Context) error) *Route {
 }
 
 func (r *Route) execute(s *Server, ctx *context) error {
+	defer func() {
+		if r := recover(); r != nil {
+			switch r := r.(type) {
+			case error:
+				ctx.StatusForbidden(r.Error())
+			case string:
+				ctx.StatusBadRequest(r)
+			}
+		}
+	}()
 	for _, action := range r.action {
 		ctx.property = action.property()
 		if e := action.execute(ctx); e != nil {
