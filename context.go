@@ -37,6 +37,8 @@ type Context interface {
 	StatusServiceUnavailable(msg string) error
 	StatusInternalServerError(msg string) error
 
+	Redirect(url string) error
+
 	Request() Request
 	Response() Response
 
@@ -122,6 +124,11 @@ func (c *context) StatusServiceUnavailable(msg string) error {
 
 func (c *context) StatusInternalServerError(msg string) error {
 	return c.httpError(StatusInternalServerError, StatusInternalServerError, msg)
+}
+
+func (c *context) Redirect(url string) error {
+	c.fastCtx.Redirect(url, fasthttp.StatusFound)
+	return nil
 }
 
 func (c *context) Tx() (*db.Tx, error) {
