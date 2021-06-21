@@ -12,6 +12,7 @@ type Response interface {
 	StatusMessage() string
 	SetStatusCode(statusCode int)
 	Header() *ResponseHeader
+	Put(key string, value interface{})
 	Data() json.Object
 	Body() []byte
 	SetBody(body []byte)
@@ -49,6 +50,13 @@ func (r *response) StatusCode() int {
 
 func (r *response) StatusMessage() string {
 	return r.statusMsg
+}
+
+func (r *response) Put(key string, value interface{}) {
+	if r.data == nil {
+		r.data = json.Object{}
+	}
+	r.data.Put(key, value)
 }
 
 func (r *response) Data() json.Object {
