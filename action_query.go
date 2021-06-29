@@ -125,6 +125,12 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		}
 	}
 
+	tx, e := ctx.Tx()
+	if e != nil {
+		ctx.logger().E(e)
+		return nil, errors.New(`Database connection failed`)
+	}
+
 	switch q.qType {
 	case queryTypeSelect:
 		sql := q.rawQuery
@@ -134,16 +140,13 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 			}
 			sql = builder.ToSQL()
 		}
-		data, err = ctx.tx.Select(sql, values...)
-		if data == nil {
-			data = []db.Resultset{}
-		}
+		data, err = tx.Select(sql, values...)
 	case queryTypeGet:
 		sql := q.rawQuery
 		if builder != nil {
 			sql = builder.ToSQL()
 		}
-		res, e := ctx.tx.Get(sql, values...)
+		res, e := tx.Get(sql, values...)
 		if e != nil {
 			err = e
 		} else if res != nil {
@@ -156,11 +159,11 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 			}
 		}
 	case queryTypeUpdate:
-		data, err = ctx.tx.Exec(q.rawQuery, values...)
+		fallthrough
 	case queryTypeInsert:
-		data, err = ctx.tx.Exec(q.rawQuery, values...)
+		fallthrough
 	case queryTypeDelete:
-		data, err = ctx.tx.Exec(q.rawQuery, values...)
+		data, err = tx.Exec(q.rawQuery, values...)
 	}
 	if err != nil {
 		if err, ok := err.(db.SQLError); ok {

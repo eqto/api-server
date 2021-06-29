@@ -63,7 +63,7 @@ type context struct {
 
 	vars json.Object
 
-	tx     *db.Tx
+	stdTx  *db.Tx
 	lockCn sync.Mutex
 
 	values map[string]interface{}
@@ -135,15 +135,15 @@ func (c *context) Tx() (*db.Tx, error) {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
 	cn := c.s.Database()
-	if cn != nil && c.tx == nil {
+	if cn != nil && c.stdTx == nil {
 		tx, e := cn.Begin()
 		if e != nil { //db error
 			c.setErr(e)
 			return nil, c.StatusServiceUnavailable(`Service unavailable`)
 		}
-		c.tx = tx
+		c.stdTx = tx
 	}
-	return c.tx, nil
+	return c.stdTx, nil
 }
 
 func (c *context) URL() *url.URL {
@@ -182,17 +182,17 @@ func (c *context) RemoteIP() string {
 }
 
 func (c *context) closeTx() {
-	if c.tx == nil {
+	if c.stdTx == nil {
 		return
 	}
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
 	if c.resp.err != nil {
-		c.tx.Rollback()
+		c.stdTx.Rollback()
 	} else {
-		c.tx.Commit()
+		c.stdTx.Commit()
 	}
-	c.tx = nil
+	c.stdTx = nil
 }
 
 func (c *context) httpError(httpCode, statusCode int, msg string) error {
