@@ -36,10 +36,15 @@ func (s *Server) Database() *db.Connection {
 	return s.cn
 }
 
-//OpenDatabase call SetDatabase and Connect
+//OpenDatabase ..
 func (s *Server) OpenDatabase(driver, host string, port int, username, password, name string) error {
-	s.SetDatabase(driver, host, port, username, password, name)
-	return s.Connect()
+	cn, e := db.Connect(driver, host, port, username, password, name)
+	if e != nil {
+		return e
+	}
+	s.cn = cn
+	s.dbConnected = true
+	return nil
 }
 
 //Connect ...
@@ -49,11 +54,6 @@ func (s *Server) Connect() error {
 	}
 	s.dbConnected = true
 	return nil
-}
-
-//SetDatabase ...
-func (s *Server) SetDatabase(driver, host string, port int, username, password, name string) {
-	s.cn, _ = db.NewConnection(driver, host, port, username, password, name)
 }
 
 //AddMiddleware ..
