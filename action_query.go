@@ -166,11 +166,8 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		data, err = tx.Exec(q.rawQuery, values...)
 	}
 	if err != nil {
-		if err, ok := err.(db.SQLError); ok {
-			switch err.Kind() {
-			case db.ErrDuplicate:
-				return nil, errors.New(`duplicate entry`)
-			}
+		if db.ErrorDuplicate(err) {
+			return nil, errors.New(`duplicate entry`)
 		}
 		ctx.logger().E(err)
 		return nil, errExecutingQuery
