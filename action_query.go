@@ -36,12 +36,15 @@ type actionQuery struct {
 	builder   *db.QueryBuilder
 }
 
-//Property ...
+func (q *actionQuery) AssignTo(prop string) Action {
+	q.qProperty = prop
+	return q
+}
+
 func (q *actionQuery) property() string {
 	return q.qProperty
 }
 
-//Params ..
 func (q *actionQuery) params() []string {
 	return q.qParams
 }
@@ -266,8 +269,8 @@ func (q *actionQuery) execute(ctx *context) error {
 	return ctx.Write(r)
 }
 
-func newQueryAction(property, query, params string) (*actionQuery, error) {
-	act := &actionQuery{rawQuery: query, qProperty: property}
+func newQueryAction(query, params string) (*actionQuery, error) {
+	act := &actionQuery{rawQuery: query}
 
 	str := strings.SplitN(query, ` `, 2)
 	queryType := strings.ToUpper(str[0])
@@ -295,7 +298,7 @@ func newQueryAction(property, query, params string) (*actionQuery, error) {
 			matches := regex.FindStringSubmatch(val)
 			if len(matches) == 3 {
 				if act.arrayName != `` && act.arrayName != matches[1] {
-					return nil, errors.New(`multiple array in single query is prohibited`)
+					return act, errors.New(`multiple array in single query is prohibited`)
 				}
 				act.arrayName = matches[1]
 			}

@@ -22,23 +22,24 @@ func (r *Route) UseGroup(name string) *Route {
 }
 
 //AddQueryAction ...
-func (r *Route) AddQueryAction(property, query, params string) *Route {
-	act, e := newQueryAction(property, query, params)
+func (r *Route) AddQueryAction(query, params string) Action {
+	act, e := newQueryAction(query, params)
 	if e != nil {
 		if r.logger != nil {
-			r.logger.W(e)
+			r.logger.E(e)
 		}
-		return r
+		return act
 	}
+	act.AssignTo(`data`)
 	r.action = append(r.action, act)
-	return r
+	return act
 }
 
 //AddAction ...
-func (r *Route) AddAction(property string, f func(Context) error) *Route {
-	act := newFuncAction(f, property)
+func (r *Route) AddAction(f func(Context) error) Action {
+	act := newFuncAction(f).AssignTo(`data`)
 	r.action = append(r.action, act)
-	return r
+	return act
 }
 
 func (r *Route) execute(s *Server, ctx *context) error {

@@ -8,6 +8,11 @@ type actionFunc struct {
 	f    func(Context) error
 }
 
+func (f *actionFunc) AssignTo(prop string) Action {
+	f.prop = prop
+	return f
+}
+
 func (f *actionFunc) execute(ctx *context) error {
 	if f.f == nil {
 		return errors.New(`nil func`)
@@ -21,6 +26,6 @@ func (f *actionFunc) params() []string {
 	return nil
 }
 
-func newFuncAction(f func(Context) error, property string) *actionFunc {
-	return &actionFunc{f: f, prop: property}
+func newFuncAction(f func(Context) error) *actionFunc {
+	return &actionFunc{f: f}
 }

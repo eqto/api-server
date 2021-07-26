@@ -60,7 +60,8 @@ func (g *Group) action(method string, f func(Context) error) *Route {
 	}
 	path := strings.ReplaceAll(name, `.`, `/`)
 	route := g.getRoute(method, `/`+path)
-	return route.AddAction(`data`, f)
+	route.AddAction(f).AssignTo(`data`)
+	return route
 }
 
 func (g *Group) getRoute(method, path string) *Route {
