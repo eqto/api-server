@@ -7,7 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/eqto/go-db"
+	"github.com/eqto/dbm"
+	"github.com/eqto/dbm/stmt"
 	"github.com/eqto/go-json"
 )
 
@@ -27,13 +28,13 @@ var (
 type actionQuery struct {
 	Action
 
-	rawQuery  string
+	rawSql    string
 	qType     uint8
 	qProperty string
 	qParams   []string
 
-	arrayName string
-	builder   *db.QueryBuilder
+	arrayName  string
+	selectStmt *stmt.Select
 }
 
 func (q *actionQuery) AssignTo(prop string) Action {
@@ -52,10 +53,9 @@ func (q *actionQuery) params() []string {
 func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface{}, error) {
 	var data interface{}
 	var err error
+	var selectStmt *stmt.Select
 
-	var builder *db.QueryBuilder
-	if (q.qType == queryTypeSelect || q.qType == queryTypeGet) && q.builder != nil {
-		builder = q.builder.Clone()
+	if (q.qType == queryTypeSelect || q.qType == queryTypeGet) && q.selectStmt != nil {
 		//example filter for books title contains word = 'Programming'
 		// {
 		//   "title": {
@@ -64,6 +64,11 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		//   }
 		// }
 		js := ctx.req.JSON()
+		selectStmt = new(stmt.Select)
+
+		if e := stmt.Copy(selectStmt, q.selectStmt); e != nil {
+			return nil, e
+		}
 
 		if filters := js.GetJSONObject(`filters`); filters != nil && len(filters) > 0 {
 			for key := range filters {
@@ -71,29 +76,24 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 				value := js.GetString(`value`)
 				filter := strings.ToUpper(js.GetString(`filter`))
 				switch filter {
-				case `LIKE`:
-					fallthrough
-				case `FULLTEXT`:
-					fallthrough
-				case `>`:
-					fallthrough
-				case `>=`:
-					fallthrough
-				case `<`:
-					fallthrough
-				case `<=`:
-					builder.WhereOp(key, filter)
-					values = append(values, value)
 				case `date`:
-					builder.WhereOp(key, `>=`)
+					selectStmt.Where().And(fmt.Sprintf(`%s >= ?`, key))
+					selectStmt.Where().And(fmt.Sprintf(`%s < ?`, key))
+
 					values = append(values, value)
 
 					time, _ := time.Parse(`2006-01-02`, value)
 					time = time.AddDate(0, 0, 1)
-					builder.WhereOp(key, `<`)
 					values = append(values, time.Format(`2006-01-02`))
+				case `LIKE`:
+					fallthrough
+				case `>`, `>=`, `<`, `<=`:
+					selectStmt.Where().And(fmt.Sprintf(`%s %s ?`, key, filter))
+					values = append(values, value)
+				// case `FULLTEXT`:
+				// 	fallthrough
 				default:
-					builder.Where(key)
+					selectStmt.Where().And(fmt.Sprintf(`%s = ?`, key))
 					values = append(values, value)
 				}
 
@@ -108,22 +108,22 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		// }
 		if sort := js.GetJSONObject(`sort`); sort != nil {
 			if active := sort.GetString(`active`); active != `` {
-				builder.Order(active, sort.GetStringOr(`direction`, `asc`))
+				selectStmt.OrderBy(fmt.Sprintf(`%s %s`, active, sort.GetStringOr(`direction`, `asc`)))
 			}
 		}
 		// Example:
 		// {
 		//   "page": {
-		// 	   "location": 2,
-		// 	   "length": 100
+		// 	   "offset": 2,
+		// 	   "count": 100
 		//   }
 		// }
 		if page := js.GetJSONObject(`page`); page != nil {
-			length := page.GetInt(`length`)
-			location := page.GetInt(`location`)
-			if length > 0 && location > 0 {
-				location = (location - 1) * length
-				builder.Limit(location, length)
+			if offset := page.GetInt(`offset`); offset > 0 {
+				selectStmt.Offset(offset)
+			}
+			if count := page.GetInt(`count`); count > 0 {
+				selectStmt.Count(count)
 			}
 		}
 	}
@@ -136,18 +136,18 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 
 	switch q.qType {
 	case queryTypeSelect:
-		sql := q.rawQuery
-		if builder != nil {
-			if builder.LimitLength() == 0 {
-				builder.Limit(builder.LimitStart(), 1000)
+		sql := q.rawSql
+		if selectStmt != nil {
+			if _, count := stmt.LimitOf(selectStmt); count == 0 {
+				selectStmt.Count(1000)
 			}
-			sql = builder.ToSQL()
+			sql = ctx.s.cn.Driver().StatementString(selectStmt)
 		}
 		data, err = tx.Select(sql, values...)
 	case queryTypeGet:
-		sql := q.rawQuery
-		if builder != nil {
-			sql = builder.ToSQL()
+		sql := q.rawSql
+		if selectStmt != nil {
+			sql = ctx.s.cn.Driver().StatementString(selectStmt)
 		}
 		res, e := tx.Get(sql, values...)
 		if e != nil {
@@ -166,10 +166,10 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 	case queryTypeInsert:
 		fallthrough
 	case queryTypeDelete:
-		data, err = tx.Exec(q.rawQuery, values...)
+		data, err = tx.Exec(q.rawSql, values...)
 	}
 	if err != nil {
-		if db.ErrorDuplicate(err) {
+		if dbm.ErrorDuplicate(err) {
 			return nil, errors.New(`duplicate entry`)
 		}
 		ctx.logger().E(err)
@@ -177,13 +177,13 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 	}
 	switch q.qType {
 	case queryTypeInsert:
-		if id, e := data.(*db.Result).LastInsertID(); e == nil {
+		if id, e := data.(*dbm.Result).LastInsertID(); e == nil {
 			data = id
 		}
 	case queryTypeUpdate:
 		fallthrough
 	case queryTypeDelete:
-		if rows, e := data.(*db.Result).RowsAffected(); e == nil {
+		if rows, e := data.(*dbm.Result).RowsAffected(); e == nil {
 			data = rows
 		}
 	}
@@ -229,7 +229,7 @@ func (q *actionQuery) execute(ctx *context) error {
 				if e != nil {
 					return e
 				}
-				if recs, ok := r.([]db.Resultset); ok {
+				if recs, ok := r.([]dbm.Resultset); ok {
 					for _, rec := range recs {
 						result = append(result, rec)
 					}
@@ -247,7 +247,7 @@ func (q *actionQuery) execute(ctx *context) error {
 				if e != nil {
 					return e
 				}
-				if recs, ok := r.([]db.Resultset); ok {
+				if recs, ok := r.([]dbm.Resultset); ok {
 					for _, rec := range recs {
 						result = append(result, rec)
 					}
@@ -269,17 +269,20 @@ func (q *actionQuery) execute(ctx *context) error {
 	return ctx.Write(r)
 }
 
-func newQueryAction(query, params string) (*actionQuery, error) {
-	act := &actionQuery{rawQuery: query}
+func newQueryAction(sql, params string) (*actionQuery, error) {
+	act := &actionQuery{rawSql: sql}
 
-	str := strings.SplitN(query, ` `, 2)
+	str := strings.SplitN(sql, ` `, 2)
 	queryType := strings.ToUpper(str[0])
 	switch queryType {
 	case `SELECT`:
-		act.builder = db.ParseQuery(query)
 		act.qType = queryTypeSelect
-		if regexp.MustCompile(`LIMIT.*\s+1$`).MatchString(strings.ToUpper(query)) {
-			act.qType = queryTypeGet
+		sel := stmt.Parse(sql)
+		if sel, ok := sel.(*stmt.Select); ok {
+			act.selectStmt = sel
+			if _, count := stmt.LimitOf(sel); count == 1 {
+				act.qType = queryTypeGet
+			}
 		}
 	case `INSERT`:
 		act.qType = queryTypeInsert

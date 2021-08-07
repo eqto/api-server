@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/eqto/go-db"
+	"github.com/eqto/dbm"
 	"github.com/eqto/go-json"
 	"github.com/valyala/fasthttp"
 )
@@ -21,7 +21,7 @@ type Server struct {
 
 	normalize bool
 
-	cn          *db.Connection
+	cn          *dbm.Connection
 	dbConnected bool
 	middlewares []*middlewareContainer
 	render      Render
@@ -32,13 +32,13 @@ type Server struct {
 }
 
 //Database ...
-func (s *Server) Database() *db.Connection {
+func (s *Server) Database() *dbm.Connection {
 	return s.cn
 }
 
 //OpenDatabase ..
 func (s *Server) OpenDatabase(driver, host string, port int, username, password, name string) error {
-	cn, e := db.Connect(driver, host, port, username, password, name)
+	cn, e := dbm.Connect(driver, host, port, username, password, name)
 	if e != nil {
 		return e
 	}

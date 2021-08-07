@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/eqto/go-db"
+	"github.com/eqto/dbm"
 	"github.com/eqto/go-json"
 	"github.com/valyala/fasthttp"
 )
@@ -42,7 +42,7 @@ type Context interface {
 	Request() Request
 	Response() Response
 
-	Tx() (*db.Tx, error)
+	Tx() (*dbm.Tx, error)
 	Session() Session
 	SetValue(name string, value interface{})
 	GetValue(name string) interface{}
@@ -63,7 +63,7 @@ type context struct {
 
 	vars json.Object
 
-	stdTx  *db.Tx
+	stdTx  *dbm.Tx
 	lockCn sync.Mutex
 
 	values map[string]interface{}
@@ -131,7 +131,7 @@ func (c *context) Redirect(url string) error {
 	return nil
 }
 
-func (c *context) Tx() (*db.Tx, error) {
+func (c *context) Tx() (*dbm.Tx, error) {
 	c.lockCn.Lock()
 	defer c.lockCn.Unlock()
 	cn := c.s.Database()
