@@ -47,9 +47,9 @@ func (r *Route) execute(s *Server, ctx *context) error {
 		if r := recover(); r != nil {
 			switch r := r.(type) {
 			case error:
-				ctx.StatusBadRequest(r.Error())
+				ctx.StatusInternalServerError(r.Error())
 			case string:
-				ctx.StatusBadRequest(r)
+				ctx.StatusInternalServerError(r)
 			}
 		}
 	}()
