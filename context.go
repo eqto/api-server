@@ -70,7 +70,7 @@ type context struct {
 }
 
 func (c *context) Write(value interface{}) error {
-	if !c.resp.stop && c.property != `` {
+	if c.property != `` {
 		c.put(c.property, value)
 	}
 	return nil
