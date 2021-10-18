@@ -96,6 +96,10 @@ func (s *Server) FileRouteRemove(path string) error {
 	return nil
 }
 
+func (s *Server) Post(path string) *Route {
+	return s.defGroup().Post(path)
+}
+
 func (s *Server) PostAction(f func(Context) error) *Route {
 	return s.defGroup().PostAction(f)
 }
@@ -108,8 +112,8 @@ func (s *Server) Get(path string) *Route {
 	return s.defGroup().Get(path)
 }
 
-func (s *Server) Post(path string) *Route {
-	return s.defGroup().Post(path)
+func (s *Server) GetAction(f func(Context) error) *Route {
+	return s.defGroup().GetAction(f)
 }
 
 //NormalizeFunc this func need to called before adding any routes. parameter n=true for renaming all route paths to lowercase, separated with underscore. Ex: /HelloWorld registered as /hello_world
@@ -144,7 +148,7 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 
 	if e := route.execute(s, ctx); e != nil {
 		ctx.setErr(e)
-	} else if ctx.resp.data == nil {
+	} else if ctx.resp.data == nil && len(ctx.resp.httpResp.Body()) == 0 {
 		ctx.resp.data = json.Object{}
 	}
 	ctx.closeTx()
