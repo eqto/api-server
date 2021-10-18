@@ -112,7 +112,7 @@ func (s *Server) Post(path string) *Route {
 	return s.defGroup().Post(path)
 }
 
-//NormalizeFunc if yes from this and beyond all Func added will renamed to lowercase, separated with underscore. Ex: HelloWorld registered as hello_world
+//NormalizeFunc this func need to called before adding any routes. parameter n=true for renaming all route paths to lowercase, separated with underscore. Ex: /HelloWorld registered as /hello_world
 func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
