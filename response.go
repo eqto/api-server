@@ -7,7 +7,6 @@ import (
 
 type Response interface {
 	ContentType() string
-	SetContentType(contentType string)
 	StatusCode() int
 	StatusMessage() string
 	SetStatusCode(statusCode int)
@@ -15,7 +14,9 @@ type Response interface {
 	Put(key string, value interface{})
 	Data() json.Object
 	Body() []byte
-	SetBody(body []byte)
+	SetContentType(contentType string)
+
+	setBody(body []byte)
 }
 
 type response struct {
@@ -70,7 +71,7 @@ func (r *response) Body() []byte {
 	return r.httpResp.Body()
 }
 
-func (r *response) SetBody(body []byte) {
+func (r *response) setBody(body []byte) {
 	r.httpResp.SetBody(body)
 }
 

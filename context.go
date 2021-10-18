@@ -82,7 +82,7 @@ func (c *context) WriteBody(contentType string, body []byte) error {
 		if contentType != `` {
 			resp.SetContentType(contentType)
 		}
-		resp.SetBody(body)
+		resp.setBody(body)
 		c.resp.stop = true
 	}
 	return nil

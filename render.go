@@ -7,7 +7,7 @@ func render(ctx Context) bool {
 	data := resp.Data()
 	if data != nil {
 		data.Put(`status`, resp.StatusCode()).Put(`message`, resp.StatusMessage())
-		resp.SetBody(data.ToBytes())
+		resp.setBody(data.ToBytes())
 	}
 	return true
 }
