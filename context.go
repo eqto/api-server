@@ -91,7 +91,7 @@ func (c *context) WriteBody(contentType string, body []byte) error {
 func (c *context) Status(code int, msg string) error {
 	if !c.resp.stop {
 		c.resp.statusCode = code
-		c.resp.statusMsg = msg
+		c.resp.statusMsg = &msg
 		c.resp.stop = true
 	}
 	return nil

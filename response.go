@@ -17,11 +17,12 @@ type Response interface {
 	SetContentType(contentType string)
 
 	setBody(body []byte)
+	statusMessage() *string
 }
 
 type response struct {
 	statusCode int
-	statusMsg  string
+	statusMsg  *string
 	data       json.Object
 
 	httpResp *fasthttp.Response
@@ -50,6 +51,13 @@ func (r *response) StatusCode() int {
 }
 
 func (r *response) StatusMessage() string {
+	if r.statusMsg == nil {
+		return ``
+	}
+	return *r.statusMsg
+}
+
+func (r *response) statusMessage() *string {
 	return r.statusMsg
 }
 
