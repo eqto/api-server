@@ -40,6 +40,7 @@ type Context interface {
 	Redirect(url string) error
 
 	Request() Request
+	RequiredParams(names string) (json.Object, error)
 	Response() Response
 
 	Tx() (*dbm.Tx, error)
@@ -166,6 +167,21 @@ func (c *context) Session() Session {
 func (c *context) Request() Request {
 	return &c.req
 }
+func (c *context) RequiredParams(names string) (json.Object, error) {
+	split := strings.Split(names, `,`)
+	js := c.req.JSON().Clone()
+
+	jsResp := json.Object{}
+	for _, s := range split {
+		name := strings.TrimSpace(s)
+		if js.Has(name) {
+			return nil, errors.New(`parameter not found: ` + name)
+		}
+		jsResp.Put(name, js.Get(name))
+	}
+	return jsResp, nil
+}
+
 func (c *context) Response() Response {
 	return &c.resp
 }
