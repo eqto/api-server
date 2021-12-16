@@ -261,7 +261,7 @@ func newContext(s *Server, fastCtx *fasthttp.RequestCtx) (*context, error) {
 		fastCtx: fastCtx,
 	}
 	ctx.resp.httpResp = &fastCtx.Response
-	fastCtx.Request.CopyTo(&ctx.req.httpReq)
+	ctx.req.fastCtx = fastCtx
 
 	return ctx, nil
 }

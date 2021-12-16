@@ -18,22 +18,22 @@ type Request interface {
 
 type request struct {
 	Request
-	httpReq fasthttp.Request
+	fastCtx *fasthttp.RequestCtx
 	js      json.Object
 	url     *url.URL
 }
 
 func (r *request) Method() string {
-	return string(r.httpReq.Header.Method())
+	return string(r.fastCtx.Method())
 }
 
 func (r *request) Header() *RequestHeader {
-	return &RequestHeader{&r.httpReq.Header}
+	return &RequestHeader{&r.fastCtx.Request.Header}
 }
 
 func (r *request) URL() *url.URL {
 	if r.url == nil {
-		u, e := url.Parse(string(r.httpReq.URI().FullURI()))
+		u, e := url.Parse(string(r.fastCtx.URI().FullURI()))
 		if e != nil {
 			return &url.URL{}
 		}
@@ -58,7 +58,7 @@ func (r *request) JSON() json.Object {
 }
 
 func (r *request) Body() []byte {
-	return r.httpReq.Body()
+	return r.fastCtx.Request.Body()
 }
 
 func (r *request) get(key string) interface{} {
