@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/eqto/dbm"
@@ -28,12 +29,17 @@ type Server struct {
 
 	logger *logger
 
-	stdGroup *Group
+	stdGroup       *Group
+	maxRequestSize int
 }
 
 //Database ...
 func (s *Server) Database() *dbm.Connection {
 	return s.cn
+}
+
+func (s *Server) MaxRequestSize(size int) {
+	s.maxRequestSize = size
 }
 
 //OpenDatabase ..
@@ -122,9 +128,21 @@ func (s *Server) NormalizeFunc(n bool) {
 }
 
 func (s *Server) executeRoutes(ctx *context, path string) bool {
-	route, ok := s.routeMap[ctx.Method()][path]
-	if !ok {
-		return false
+	currPath := path
+	var route *Route
+	for {
+		r, ok := s.routeMap[ctx.Method()][currPath]
+		if !ok {
+			split := strings.Split(currPath, `/`)
+			if len(split) > 1 {
+				currPath = strings.Join(split[0:len(split)-1], `/`)
+			} else {
+				return false
+			}
+		} else {
+			route = r
+			break
+		}
 	}
 	if route == nil {
 		return false
@@ -145,10 +163,13 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 			}
 		}
 	}
+	httpResp := ctx.resp.httpResp
 
-	if e := route.execute(s, ctx); e != nil {
+	e := route.execute(s, ctx)
+
+	if e != nil {
 		ctx.setErr(e)
-	} else if ctx.resp.data == nil && len(ctx.resp.httpResp.Body()) == 0 {
+	} else if !httpResp.IsBodyStream() && ctx.resp.data == nil && len(httpResp.Body()) == 0 {
 		ctx.resp.data = json.Object{}
 	}
 	ctx.closeTx()
@@ -218,11 +239,14 @@ func (s *Server) Serve(port int) error {
 		fasthttp.CompressBrotliDefaultCompression,
 		fasthttp.CompressDefaultCompression,
 	),
+
 		DisableHeaderNamesNormalizing: true,
-		ReadTimeout:                   5 * time.Second,
-		WriteTimeout:                  10 * time.Second,
 		MaxKeepaliveDuration:          10 * time.Second,
 	}
+	if s.maxRequestSize > 0 {
+		s.serv.MaxRequestBodySize = s.maxRequestSize
+	}
+
 	return s.serv.ListenAndServe(fmt.Sprintf(`:%d`, port))
 }
 

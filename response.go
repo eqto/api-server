@@ -14,6 +14,7 @@ type Response interface {
 	Put(key string, value interface{})
 	Data() json.Object
 	Body() []byte
+	StreamWriter() *StreamWriter
 	SetContentType(contentType string)
 
 	setBody(body []byte)
@@ -28,6 +29,7 @@ type response struct {
 	httpResp *fasthttp.Response
 	err      error
 	stop     bool
+	writer   *StreamWriter
 }
 
 func (r *response) Header() *ResponseHeader {
@@ -77,6 +79,15 @@ func (r *response) Data() json.Object {
 
 func (r *response) Body() []byte {
 	return r.httpResp.Body()
+}
+
+func (r *response) StreamWriter() *StreamWriter {
+	if r.writer == nil {
+		sw := &StreamWriter{}
+		r.httpResp.SetBodyStreamWriter(sw.write)
+		r.writer = sw
+	}
+	return r.writer
 }
 
 func (r *response) setBody(body []byte) {
