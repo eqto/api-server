@@ -1,6 +1,7 @@
 package api
 
 import (
+	"mime/multipart"
 	"net/url"
 
 	"github.com/eqto/go-json"
@@ -14,6 +15,7 @@ type Request interface {
 	URL() *url.URL
 	JSON() json.Object
 	Body() []byte
+	File(name string) (*multipart.FileHeader, error)
 }
 
 type request struct {
@@ -25,6 +27,10 @@ type request struct {
 
 func (r *request) Method() string {
 	return string(r.fastCtx.Method())
+}
+
+func (r *request) File(name string) (*multipart.FileHeader, error) {
+	return r.fastCtx.FormFile(name)
 }
 
 func (r *request) Header() *RequestHeader {
