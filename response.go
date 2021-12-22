@@ -14,7 +14,6 @@ type Response interface {
 	Put(key string, value interface{})
 	Data() json.Object
 	Body() []byte
-	StreamWriter() *StreamWriter
 	SetContentType(contentType string)
 
 	setBody(body []byte)
@@ -81,7 +80,7 @@ func (r *response) Body() []byte {
 	return r.httpResp.Body()
 }
 
-func (r *response) StreamWriter() *StreamWriter {
+func (r *response) streamWriter() *StreamWriter {
 	if r.writer == nil {
 		sw := &StreamWriter{}
 		r.httpResp.SetBodyStreamWriter(sw.write)

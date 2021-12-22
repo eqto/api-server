@@ -2,6 +2,7 @@ package api
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"strings"
 	"sync"
@@ -17,10 +18,13 @@ type Context interface {
 	Method() string
 	ContentType() string
 	RemoteIP() string
-	Write(value interface{}) error
 
+	Write(value interface{}) error
 	//WriteBody write to body and ignoring the next action
 	WriteBody(contentType string, body []byte) error
+	//WriteStream
+	WriteStream(filename, contentType string, writeFunc func(*StreamWriter)) error
+
 	//Status stop execution and return status and message
 	Status(status int, msg string) error
 	//Error stop execution, rollback database transaction, and return status and message
@@ -74,6 +78,17 @@ func (c *context) Write(value interface{}) error {
 	if c.property != `` {
 		c.put(c.property, value)
 	}
+	return nil
+}
+
+func (c *context) WriteStream(filename, contentType string, fn func(*StreamWriter)) error {
+	c.resp.Header().Set(`Content-Disposition`, fmt.Sprintf(`attachment;filename="%s"`, filename))
+	c.resp.Header().Set(`Content-Type`, contentType)
+	go func() {
+		sw := c.resp.streamWriter()
+		defer sw.Close()
+		fn(sw)
+	}()
 	return nil
 }
 
