@@ -47,6 +47,7 @@ type Context interface {
 	RequiredParams(names string) (json.Object, error)
 	Response() Response
 
+	Database() (*dbm.Connection, error)
 	Tx() (*dbm.Tx, error)
 	Session() Session
 	SetValue(name string, value interface{})
@@ -84,8 +85,8 @@ func (c *context) Write(value interface{}) error {
 func (c *context) WriteStream(filename, contentType string, fn func(*StreamWriter)) error {
 	c.resp.Header().Set(`Content-Disposition`, fmt.Sprintf(`attachment;filename="%s"`, filename))
 	c.resp.Header().Set(`Content-Type`, contentType)
+	sw := c.resp.streamWriter()
 	go func() {
-		sw := c.resp.streamWriter()
 		defer sw.Close()
 		fn(sw)
 	}()
@@ -145,6 +146,13 @@ func (c *context) StatusInternalServerError(msg string) error {
 func (c *context) Redirect(url string) error {
 	c.fastCtx.Redirect(url, fasthttp.StatusFound)
 	return nil
+}
+
+func (c *context) Database() (*dbm.Connection, error) {
+	if c.s.cn == nil {
+		return nil, errors.New(`database not available`)
+	}
+	return c.s.cn, nil
 }
 
 func (c *context) Tx() (*dbm.Tx, error) {
