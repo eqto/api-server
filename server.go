@@ -239,9 +239,12 @@ func (s *Server) Serve(port int) error {
 		fasthttp.CompressBrotliDefaultCompression,
 		fasthttp.CompressDefaultCompression,
 	),
-
+		CloseOnShutdown:               true,
+		NoDefaultServerHeader:         true,
+		NoDefaultContentType:          true,
+		NoDefaultDate:                 true,
 		DisableHeaderNamesNormalizing: true,
-		MaxKeepaliveDuration:          10 * time.Second,
+		DisableKeepalive:              true,
 	}
 	if s.maxRequestSize > 0 {
 		s.serv.MaxRequestBodySize = s.maxRequestSize
