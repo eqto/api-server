@@ -16,6 +16,7 @@ type Request interface {
 	JSON() json.Object
 	Body() []byte
 	File(name string) (*multipart.FileHeader, error)
+	QueryParam(name string) string
 }
 
 type request struct {
@@ -27,6 +28,10 @@ type request struct {
 
 func (r *request) Method() string {
 	return string(r.fastCtx.Method())
+}
+
+func (r *request) QueryParam(name string) string {
+	return r.url.Query().Get(name)
 }
 
 func (r *request) File(name string) (*multipart.FileHeader, error) {
