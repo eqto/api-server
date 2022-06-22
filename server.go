@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net"
 	"strings"
 	"time"
 
@@ -44,7 +45,14 @@ func (s *Server) MaxRequestSize(size int) {
 
 //OpenDatabase ..
 func (s *Server) OpenDatabase(driver, host string, port int, username, password, name string) error {
-	cn, e := dbm.Connect(driver, host, port, username, password, name)
+	cn, e := dbm.Connect(dbm.Config{
+		DriverName: driver,
+		Hostname:   host,
+		Port:       port,
+		Username:   username,
+		Password:   password,
+		Name:       name,
+	})
 	if e != nil {
 		return e
 	}
@@ -199,8 +207,7 @@ func (s *Server) executeFiles(fastCtx *fasthttp.RequestCtx, path string) bool {
 	return false
 }
 
-//Serve ..
-func (s *Server) Serve(port int) error {
+func (s *Server) serve(ln net.Listener) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
 		ctx, e := newContext(s, fastCtx)
 		if e != nil {
@@ -249,8 +256,28 @@ func (s *Server) Serve(port int) error {
 	if s.maxRequestSize > 0 {
 		s.serv.MaxRequestBodySize = s.maxRequestSize
 	}
+	return s.serv.Serve(ln)
+}
 
-	return s.serv.ListenAndServe(fmt.Sprintf(`:%d`, port))
+func (s *Server) ServeUnix(filename string) error {
+	ln, e := net.Listen(`unix`, filename)
+	if e != nil {
+		return e
+	}
+	defer ln.Close()
+
+	return s.serve(ln)
+}
+
+//Serve ..
+func (s *Server) Serve(port int) error {
+	ln, e := net.Listen(`tcp4`, fmt.Sprintf(`:%d`, port))
+	if e != nil {
+		return e
+	}
+	defer ln.Close()
+
+	return s.serve(ln)
 }
 
 //Shutdown ..
