@@ -169,7 +169,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		data, err = tx.Exec(q.rawSql, values...)
 	}
 	if err != nil {
-		if dbm.ErrorDuplicate(err) {
+		if dbm.IsErrDuplicate(err) {
 			return nil, errors.New(`duplicate entry`)
 		}
 		ctx.logger().E(err)

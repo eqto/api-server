@@ -3,34 +3,22 @@ package api
 import "bufio"
 
 type StreamWriter struct {
-	dataCh chan []byte
 	doneCh chan bool
+	writer *bufio.Writer
 }
 
 func (s *StreamWriter) write(w *bufio.Writer) {
-	s.dataCh = make(chan []byte)
 	s.doneCh = make(chan bool)
-	for {
-		select {
-		case data := <-s.dataCh:
-			w.Write(data)
-		case done := <-s.doneCh:
-			if done {
-				return
-			} else {
-				w.Flush()
-			}
-		}
-
-	}
+	s.writer = w
+	<-s.doneCh
 }
 
-func (s *StreamWriter) Write(data []byte) {
-	s.dataCh <- data
+func (s *StreamWriter) Write(data []byte) (int, error) {
+	return s.writer.Write(data)
 }
 
-func (s *StreamWriter) Flush() {
-	s.doneCh <- false
+func (s *StreamWriter) Flush() error {
+	return s.writer.Flush()
 }
 
 func (s *StreamWriter) Close() {

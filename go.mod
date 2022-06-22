@@ -1,9 +1,9 @@
 module github.com/eqto/api-server
 
-go 1.15
+go 1.16
 
 require (
-	github.com/eqto/dbm v0.10.2
+	github.com/eqto/dbm v0.13.1
 	github.com/eqto/go-json v0.4.1
-	github.com/valyala/fasthttp v1.20.0
+	github.com/valyala/fasthttp v1.37.0
 )
