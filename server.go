@@ -45,14 +45,8 @@ func (s *Server) MaxRequestSize(size int) {
 
 //OpenDatabase ..
 func (s *Server) OpenDatabase(driver, host string, port int, username, password, name string) error {
-	cn, e := dbm.Connect(dbm.Config{
-		DriverName: driver,
-		Hostname:   host,
-		Port:       port,
-		Username:   username,
-		Password:   password,
-		Name:       name,
-	})
+	cn, e := dbm.Connect(driver, host, port,
+		username, password, name)
 	if e != nil {
 		return e
 	}
