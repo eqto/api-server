@@ -240,12 +240,12 @@ func (s *Server) serve(ln net.Listener) error {
 		fasthttp.CompressBrotliDefaultCompression,
 		fasthttp.CompressDefaultCompression,
 	),
+
 		CloseOnShutdown:               true,
 		NoDefaultServerHeader:         true,
 		NoDefaultContentType:          true,
 		NoDefaultDate:                 true,
 		DisableHeaderNamesNormalizing: true,
-		DisableKeepalive:              true,
 	}
 	if s.maxRequestSize > 0 {
 		s.serv.MaxRequestBodySize = s.maxRequestSize
