@@ -32,8 +32,9 @@ func (r *ResponseHeader) SetCookie(key, value string, expireIn time.Duration) {
 	ck := &fasthttp.Cookie{}
 	ck.SetKey(key)
 	ck.SetValue(value)
+
 	if expireIn > 0 {
-		sec := int(expireIn / 1 * time.Second)
+		sec := int(expireIn.Seconds())
 		if sec > 0 {
 			ck.SetMaxAge(sec)
 		}
