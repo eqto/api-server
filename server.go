@@ -13,7 +13,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//Server ...
+// Server ...
 type Server struct {
 	serv *fasthttp.Server
 
@@ -34,16 +34,20 @@ type Server struct {
 	maxRequestSize int
 }
 
-//Database ...
+// Database ...
 func (s *Server) Database() *dbm.Connection {
 	return s.cn
+}
+
+func (s *Server) SetDatabase(cn *dbm.Connection) {
+	s.cn = cn
 }
 
 func (s *Server) MaxRequestSize(size int) {
 	s.maxRequestSize = size
 }
 
-//OpenDatabase ..
+// OpenDatabase ..
 func (s *Server) OpenDatabase(driver, host string, port int, username, password, name string) error {
 	cn, e := dbm.Connect(driver, host, port,
 		username, password, name)
@@ -55,7 +59,7 @@ func (s *Server) OpenDatabase(driver, host string, port int, username, password,
 	return nil
 }
 
-//Connect ...
+// Connect ...
 func (s *Server) Connect() error {
 	if e := s.cn.Connect(); e != nil {
 		return e
@@ -64,7 +68,7 @@ func (s *Server) Connect() error {
 	return nil
 }
 
-//AddMiddleware ..
+// AddMiddleware ..
 func (s *Server) AddMiddleware(f func(Context) error) Middleware {
 	return s.defGroup().AddMiddleware(f)
 }
@@ -73,7 +77,7 @@ func (s *Server) SetRender(r Render) {
 	s.render = r
 }
 
-//Proxy ...
+// Proxy ...
 func (s *Server) Proxy(path, dest string) error {
 	p, e := newProxy(path, dest)
 	if e != nil {
@@ -83,7 +87,7 @@ func (s *Server) Proxy(path, dest string) error {
 	return nil
 }
 
-//FileRoute serve static file. Path parameter to determine url to be processed. Dest parameter will find directory of the file reside. RedirectTo parameter to redirect non existing file, this param can be used for SPA (ex. index.html).
+// FileRoute serve static file. Path parameter to determine url to be processed. Dest parameter will find directory of the file reside. RedirectTo parameter to redirect non existing file, this param can be used for SPA (ex. index.html).
 func (s *Server) FileRoute(path, dest, redirectTo string) error {
 	f, e := newFile(path, dest, redirectTo)
 	if e != nil {
@@ -93,7 +97,7 @@ func (s *Server) FileRoute(path, dest, redirectTo string) error {
 	return nil
 }
 
-//FileRouteRemove ...
+// FileRouteRemove ...
 func (s *Server) FileRouteRemove(path string) error {
 	for i, file := range s.files {
 		if file.path == path {
@@ -124,7 +128,7 @@ func (s *Server) GetAction(f func(Context) error) *Route {
 	return s.defGroup().GetAction(f)
 }
 
-//NormalizeFunc this func need to called before adding any routes. parameter n=true for renaming all route paths to lowercase, separated with underscore. Ex: /HelloWorld registered as /hello_world
+// NormalizeFunc this func need to called before adding any routes. parameter n=true for renaming all route paths to lowercase, separated with underscore. Ex: /HelloWorld registered as /hello_world
 func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
@@ -263,7 +267,7 @@ func (s *Server) ServeUnix(filename string) error {
 	return s.serve(ln)
 }
 
-//Serve ..
+// Serve ..
 func (s *Server) Serve(port int) error {
 	ln, e := net.Listen(`tcp4`, fmt.Sprintf(`:%d`, port))
 	if e != nil {
@@ -274,7 +278,7 @@ func (s *Server) Serve(port int) error {
 	return s.serve(ln)
 }
 
-//Shutdown ..
+// Shutdown ..
 func (s *Server) Shutdown() error {
 	if s.serv != nil {
 		s.serv.DisableKeepalive = true
@@ -286,12 +290,12 @@ func (s *Server) Shutdown() error {
 	return nil
 }
 
-//SetLogger ...
+// SetLogger ...
 func (s *Server) SetLogger(debug func(...interface{}), info func(...interface{}), warn func(...interface{}), err func(...interface{})) {
 	s.logger = &logger{D: debug, I: info, W: warn, E: err}
 }
 
-//Group ..
+// Group ..
 func (s *Server) Group(name string) *Group {
 	return &Group{s: s, name: name}
 }
@@ -303,7 +307,7 @@ func (s *Server) defGroup() *Group {
 	return s.stdGroup
 }
 
-//New ...
+// New ...
 func New() *Server {
 	s := &Server{
 		routeMap: make(map[string]map[string]*Route),
