@@ -13,14 +13,22 @@ var (
 	normalizeRegex *regexp.Regexp
 )
 
-//Group ..
+// Group ..
 type Group struct {
-	s    *Server
-	name string
+	s          *Server
+	prefixPath string
+	name       string
+}
+
+func (g *Group) formatPath(path string) string {
+	if g.prefixPath != `` && path[0] != '/' {
+		path = `/` + path
+	}
+	return g.prefixPath + path
 }
 
 func (g *Group) Get(path string) *Route {
-	return g.getRoute(MethodGet, path)
+	return g.getRoute(MethodGet, g.formatPath(path))
 }
 
 func (g *Group) GetAction(f func(Context) error) *Route {
@@ -32,7 +40,7 @@ func (g *Group) GetSecureAction(f func(Context) error) *Route {
 }
 
 func (g *Group) Post(path string) *Route {
-	return g.getRoute(MethodPost, path)
+	return g.getRoute(MethodPost, g.formatPath(path))
 }
 
 func (g *Group) PostAction(f func(Context) error) *Route {
@@ -43,7 +51,7 @@ func (g *Group) PostSecureAction(f func(Context) error) *Route {
 	return g.action(MethodPost, f).Secure()
 }
 
-//AddMiddleware ..
+// AddMiddleware ..
 func (g *Group) AddMiddleware(f func(Context) error) Middleware {
 	m := &middlewareContainer{f: f, group: g.name}
 	g.s.middlewares = append(g.s.middlewares, m)
@@ -59,7 +67,7 @@ func (g *Group) action(method string, f func(Context) error) *Route {
 		return &Route{logger: g.s.logger}
 	}
 	path := strings.ReplaceAll(name, `.`, `/`)
-	route := g.getRoute(method, `/`+path)
+	route := g.getRoute(method, g.formatPath(path))
 	route.AddAction(f).AssignTo(`data`)
 	return route
 }

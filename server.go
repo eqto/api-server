@@ -108,6 +108,16 @@ func (s *Server) FileRouteRemove(path string) error {
 	return nil
 }
 
+func (s *Server) SetPrefixPath(path string) {
+	if path == `` {
+		return
+	}
+	if path[0] != '/' {
+		path = `/` + path
+	}
+	s.defGroup().prefixPath = path
+}
+
 func (s *Server) Post(path string) *Route {
 	return s.defGroup().Post(path)
 }
