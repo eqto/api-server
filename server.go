@@ -307,7 +307,11 @@ func (s *Server) SetLogger(debug func(...interface{}), info func(...interface{})
 
 // Group ..
 func (s *Server) Group(name string) *Group {
-	return &Group{s: s, name: name}
+	g := &Group{s: s, name: name}
+	if name != `` {
+		g.prefixPath = s.defGroup().prefixPath
+	}
+	return g
 }
 
 func (s *Server) defGroup() *Group {
