@@ -19,6 +19,14 @@ func (r *RequestHeader) Get(key string) string {
 	return ``
 }
 
+func (r *RequestHeader) Cookie(key string) string {
+	cookie := r.httpHeader.Cookie(key)
+	if cookie == nil {
+		return ``
+	}
+	return string(cookie)
+}
+
 func (r *RequestHeader) Bytes() []byte {
 	return r.httpHeader.Header()
 }
