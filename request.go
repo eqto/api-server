@@ -8,12 +8,13 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//Request ..
+// Request ..
 type Request interface {
 	Header() *RequestHeader
 	Method() string
 	URL() *url.URL
 	JSON() json.Object
+	ValidJSON(names ...string) (json.Object, bool)
 	Body() []byte
 	File(name string) (*multipart.FileHeader, error)
 	QueryParam(name string) string
@@ -66,6 +67,19 @@ func (r *request) JSON() json.Object {
 		r.js = json.Object{}
 	}
 	return r.js.Clone()
+}
+
+func (r *request) ValidJSON(names ...string) (json.Object, bool) {
+	js := r.JSON()
+	if js == nil {
+		return nil, false
+	}
+	for _, name := range names {
+		if !js.Has(name) {
+			return nil, false
+		}
+	}
+	return js, true
 }
 
 func (r *request) Body() []byte {
