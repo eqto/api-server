@@ -71,9 +71,6 @@ func (r *request) JSON() json.Object {
 
 func (r *request) ValidJSON(names ...string) (json.Object, bool) {
 	js := r.JSON()
-	if js == nil {
-		return nil, false
-	}
 	for _, name := range names {
 		if !js.Has(name) {
 			return nil, false
