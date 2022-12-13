@@ -21,7 +21,7 @@ type Group struct {
 }
 
 func (g *Group) formatPath(path string) string {
-	if g.prefixPath != `` && path[0] != '/' {
+	if path[0] != '/' {
 		path = `/` + path
 	}
 	return g.prefixPath + path
