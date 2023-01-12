@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"strings"
 	"time"
 
 	"github.com/eqto/dbm"
@@ -144,52 +143,36 @@ func (s *Server) NormalizeFunc(n bool) {
 }
 
 func (s *Server) executeRoutes(ctx *context, path string) bool {
-	currPath := path
-	var route *Route
-	for {
-		r, ok := s.routeMap[ctx.Method()][currPath]
-		if !ok {
-			split := strings.Split(currPath, `/`)
-			if len(split) > 1 {
-				currPath = strings.Join(split[0:len(split)-1], `/`)
-			} else {
-				return false
-			}
-		} else {
-			route = r
-			break
-		}
-	}
-	if route == nil {
-		return false
-	}
-	for _, m := range s.middlewares {
-		if m.group == `` || m.group == route.group {
-			if !m.secure || (m.secure && route.secure) {
-				if e := m.f(ctx); e != nil {
-					ctx.setErr(e)
-					if m.secure {
-						ctx.StatusUnauthorized(`Authorization error: ` + e.Error())
-					} else {
-						s.logger.W(e)
-						ctx.StatusInternalServerError(`Internal server error`)
+	if route, ok := s.routeMap[ctx.Method()][path]; ok {
+		for _, m := range s.middlewares {
+			if m.group == `` || m.group == route.group {
+				if !m.secure || (m.secure && route.secure) {
+					if e := m.f(ctx); e != nil {
+						ctx.setErr(e)
+						if m.secure {
+							ctx.StatusUnauthorized(`Authorization error: ` + e.Error())
+						} else {
+							s.logger.W(e)
+							ctx.StatusInternalServerError(`Internal server error`)
+						}
+						return true
 					}
-					return true
 				}
 			}
 		}
-	}
-	httpResp := ctx.resp.httpResp
+		httpResp := ctx.resp.httpResp
 
-	e := route.execute(s, ctx)
+		e := route.execute(s, ctx)
 
-	if e != nil {
-		ctx.setErr(e)
-	} else if !httpResp.IsBodyStream() && ctx.resp.data == nil && len(httpResp.Body()) == 0 {
-		ctx.resp.data = json.Object{}
+		if e != nil {
+			ctx.setErr(e)
+		} else if !httpResp.IsBodyStream() && ctx.resp.data == nil && len(httpResp.Body()) == 0 {
+			ctx.resp.data = json.Object{}
+		}
+		ctx.closeTx()
+		return true
 	}
-	ctx.closeTx()
-	return true
+	return false
 }
 
 func (s *Server) executeProxies(ctx *context, fastCtx *fasthttp.RequestCtx, path string) bool {
@@ -229,6 +212,7 @@ func (s *Server) serve(ln net.Listener) error {
 		ctx.resp.SetContentType(`application/json`)
 
 		if ok := s.executeRoutes(ctx, path); !ok {
+			println(`nok`)
 			if ok := s.executeProxies(ctx, fastCtx, path); !ok {
 				if ok := s.executeFiles(fastCtx, path); !ok {
 					ctx.setErr(errors.New(`route ` + path + ` not found`))
