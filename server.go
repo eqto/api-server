@@ -212,11 +212,11 @@ func (s *Server) serve(ln net.Listener) error {
 		ctx.resp.SetContentType(`application/json`)
 
 		if ok := s.executeRoutes(ctx, path); !ok {
-			println(`nok`)
 			if ok := s.executeProxies(ctx, fastCtx, path); !ok {
 				if ok := s.executeFiles(fastCtx, path); !ok {
-					ctx.setErr(errors.New(`route ` + path + ` not found`))
-					ctx.StatusServiceUnavailable(`route ` + path + ` not found`)
+					errStr := fmt.Sprintf(`route %s %s not found`, ctx.Method(), path)
+					ctx.setErr(errors.New(errStr))
+					ctx.StatusServiceUnavailable(errStr)
 				}
 			}
 		}
