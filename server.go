@@ -17,7 +17,7 @@ type Server struct {
 	serv *fasthttp.Server
 
 	routeMap map[string]map[string]*Route
-	proxies  []proxy
+	proxies  []*Proxy
 	files    []file
 
 	normalize bool
@@ -76,14 +76,19 @@ func (s *Server) SetRender(r Render) {
 	s.render = r
 }
 
-// Proxy ...
-func (s *Server) Proxy(path, dest string) error {
-	p, e := newProxy(path, dest)
-	if e != nil {
-		return e
-	}
+// func (s *Server) Proxy(path, dest string) error {
+// 	p, e := newProxy(path, dest, ``, ``)
+// 	if e != nil {
+// 		return e
+// 	}
+// 	s.proxies = append(s.proxies, p)
+// 	return nil
+// }
+
+func (s *Server) AddProxy(address string) *Proxy {
+	p := &Proxy{client: &fasthttp.HostClient{Addr: address}}
 	s.proxies = append(s.proxies, p)
-	return nil
+	return p
 }
 
 // FileRoute serve static file. Path parameter to determine url to be processed. Dest parameter will find directory of the file reside. RedirectTo parameter to redirect non existing file, this param can be used for SPA (ex. index.html).
@@ -177,8 +182,8 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 
 func (s *Server) executeProxies(ctx *context, fastCtx *fasthttp.RequestCtx, path string) bool {
 	for _, proxy := range s.proxies {
-		if proxy.match(string(path)) {
-			if e := proxy.execute(s, fastCtx); e != nil {
+		if newPath, ok := proxy.translate(path); ok {
+			if e := proxy.execute(s, fastCtx, newPath); e != nil {
 				ctx.setErr(e)
 				ctx.StatusInternalServerError(`Unable to execute proxy`)
 			}
@@ -212,8 +217,8 @@ func (s *Server) serve(ln net.Listener) error {
 		ctx.resp.SetContentType(`application/json`)
 
 		if ok := s.executeRoutes(ctx, path); !ok {
-			if ok := s.executeProxies(ctx, fastCtx, path); !ok {
-				if ok := s.executeFiles(fastCtx, path); !ok {
+			if ok := s.executeFiles(fastCtx, path); !ok {
+				if ok := s.executeProxies(ctx, fastCtx, path); !ok {
 					errStr := fmt.Sprintf(`route %s %s not found`, ctx.Method(), path)
 					ctx.setErr(errors.New(errStr))
 					ctx.StatusServiceUnavailable(errStr)

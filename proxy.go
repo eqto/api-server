@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -8,18 +9,31 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-type proxy struct {
-	path   string
-	dest   string
-	regex  *regexp.Regexp
-	client *fasthttp.HostClient
+type rewriteMap struct {
+	regex       *regexp.Regexp
+	replacePath string
 }
 
-func (p *proxy) match(path string) bool {
-	if p.regex == nil {
-		return false
+type Proxy struct {
+	client     *fasthttp.HostClient
+	rewriteMap []rewriteMap
+}
+
+func (p *Proxy) translate(path string) (string, bool) {
+	for _, rw := range p.rewriteMap {
+		if rw.regex != nil {
+			matches := rw.regex.FindStringSubmatch(path)
+			if matches == nil {
+				return ``, false
+			}
+			newPath := rw.replacePath
+			for key, val := range matches {
+				newPath = strings.ReplaceAll(newPath, fmt.Sprintf(`$%d`, key), val)
+			}
+			return newPath, true
+		}
 	}
-	return p.regex.MatchString(path)
+	return ``, false
 }
 
 func prepareRequest(req *fasthttp.Request) {
@@ -30,10 +44,14 @@ func postprocessResponse(resp *fasthttp.Response) {
 	resp.Header.Del("Connection")
 }
 
-func (p *proxy) execute(s *Server, fastCtx *fasthttp.RequestCtx) error {
+func (p *Proxy) execute(s *Server, fastCtx *fasthttp.RequestCtx, newPath string) error {
 	req, resp := &fastCtx.Request, &fastCtx.Response
-
 	prepareRequest(req)
+	query := req.URI().QueryString()
+	req.SetRequestURI(newPath)
+	if query != nil {
+		req.URI().SetQueryString(string(query))
+	}
 	if e := p.client.DoTimeout(req, resp, 60*time.Second); e != nil {
 		return e
 	}
@@ -41,17 +59,11 @@ func (p *proxy) execute(s *Server, fastCtx *fasthttp.RequestCtx) error {
 	return nil
 }
 
-func newProxy(path, dest string) (proxy, error) {
-	if !strings.HasPrefix(path, `^`) {
-		path = `^` + path
-	}
-	regex, e := regexp.Compile(path)
-
-	p := proxy{path: path, dest: dest}
+func (p *Proxy) Rewrite(regexPath, replacePath string) (*Proxy, error) {
+	regex, e := regexp.Compile(regexPath)
 	if e != nil {
 		return p, e
 	}
-	p.regex = regex
-	p.client = &fasthttp.HostClient{Addr: dest}
+	p.rewriteMap = append(p.rewriteMap, rewriteMap{regex, replacePath})
 	return p, nil
 }
