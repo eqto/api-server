@@ -30,6 +30,7 @@ type Server struct {
 	logger *logger
 
 	stdGroup       *Group
+	groupMap       map[string]struct{}
 	maxRequestSize int
 }
 
@@ -76,15 +77,6 @@ func (s *Server) SetRender(r Render) {
 	s.render = r
 }
 
-// func (s *Server) Proxy(path, dest string) error {
-// 	p, e := newProxy(path, dest, ``, ``)
-// 	if e != nil {
-// 		return e
-// 	}
-// 	s.proxies = append(s.proxies, p)
-// 	return nil
-// }
-
 func (s *Server) AddProxy(address string) *Proxy {
 	p := &Proxy{client: &fasthttp.HostClient{Addr: address}}
 	s.proxies = append(s.proxies, p)
@@ -110,16 +102,6 @@ func (s *Server) FileRouteRemove(path string) error {
 		}
 	}
 	return nil
-}
-
-func (s *Server) SetPrefixPath(path string) {
-	if path == `` {
-		return
-	}
-	if path[0] != '/' {
-		path = `/` + path
-	}
-	s.defGroup().prefixPath = path
 }
 
 func (s *Server) Post(path string) *Route {
@@ -294,13 +276,25 @@ func (s *Server) SetLogger(debug func(...interface{}), info func(...interface{})
 	s.logger = &logger{D: debug, I: info, W: warn, E: err}
 }
 
-// Group ..
+// if name is empty will return default group
 func (s *Server) Group(name string) *Group {
 	g := &Group{s: s, name: name}
 	if name != `` {
-		g.prefixPath = s.defGroup().prefixPath
+		g.SetPrefixPath(name)
+		if s.groupMap == nil {
+			s.groupMap = make(map[string]struct{})
+		}
+		s.groupMap[name] = struct{}{}
 	}
 	return g
+}
+
+func (s *Server) HasGroup(name string) bool {
+	if s.groupMap == nil {
+		return false
+	}
+	_, ok := s.groupMap[name]
+	return ok
 }
 
 func (s *Server) defGroup() *Group {
