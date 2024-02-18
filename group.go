@@ -47,6 +47,15 @@ func (g *Group) Post(path string) *Route {
 	return g.getRoute(MethodPost, g.formatPath(path))
 }
 
+func (g *Group) HandleWebsocket(path string) *Websocket {
+	route := g.getRoute(MethodGet, g.formatPath(path))
+	route.isWs = true
+	if g.s.wsServ == nil {
+		g.s.wsServ = newWsServer()
+	}
+	return &Websocket{wsServ: g.s.wsServ}
+}
+
 func (g *Group) PostAction(f func(Context) error) *Route {
 	return g.action(MethodPost, f)
 }
@@ -55,7 +64,6 @@ func (g *Group) PostSecureAction(f func(Context) error) *Route {
 	return g.action(MethodPost, f).Secure()
 }
 
-// AddMiddleware ..
 func (g *Group) AddMiddleware(f func(Context) error) Middleware {
 	m := &middlewareContainer{f: f, group: g.name}
 	g.s.middlewares = append(g.s.middlewares, m)

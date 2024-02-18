@@ -1,27 +1,28 @@
 package api
 
-//Route ...
+// Route ...
 type Route struct {
 	action []Action
 	secure bool
 	group  string
 
+	isWs   bool
 	logger *logger
 }
 
-//Secure ...
+// Secure ...
 func (r *Route) Secure() *Route {
 	r.secure = true
 	return r
 }
 
-//UseGroup only use middleware that have the same name or no name
+// UseGroup only use middleware that have the same name or no name
 func (r *Route) UseGroup(name string) *Route {
 	r.group = name
 	return r
 }
 
-//AddQueryAction ...
+// AddQueryAction ...
 func (r *Route) AddQueryAction(query, params string) Action {
 	act, e := newQueryAction(query, params)
 	if e != nil {
@@ -35,7 +36,7 @@ func (r *Route) AddQueryAction(query, params string) Action {
 	return act
 }
 
-//AddAction ...
+// AddAction ...
 func (r *Route) AddAction(f func(Context) error) Action {
 	act := newFuncAction(f).AssignTo(`data`)
 	r.action = append(r.action, act)
@@ -53,13 +54,17 @@ func (r *Route) execute(s *Server, ctx *context) error {
 			}
 		}
 	}()
-	for _, action := range r.action {
-		ctx.property = action.property()
-		if e := action.execute(ctx); e != nil {
-			return e
-		}
-		if ctx.resp.stop {
-			return nil
+	if r.isWs {
+		s.wsServ.Upgrade(ctx.fastCtx)
+	} else {
+		for _, action := range r.action {
+			ctx.property = action.property()
+			if e := action.execute(ctx); e != nil {
+				return e
+			}
+			if ctx.resp.stop {
+				return nil
+			}
 		}
 	}
 	return nil

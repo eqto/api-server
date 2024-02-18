@@ -14,7 +14,8 @@ import (
 
 // Server ...
 type Server struct {
-	serv *fasthttp.Server
+	serv   *fasthttp.Server
+	wsServ *wsServer
 
 	routeMap map[string]map[string]*Route
 	proxies  []*Proxy
