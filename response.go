@@ -28,7 +28,7 @@ type response struct {
 	httpResp *fasthttp.Response
 	err      error
 	stop     bool
-	writer   *StreamWriter
+	writer   *streamWriter
 }
 
 func (r *response) Header() *ResponseHeader {
@@ -80,9 +80,9 @@ func (r *response) Body() []byte {
 	return r.httpResp.Body()
 }
 
-func (r *response) streamWriter() *StreamWriter {
+func (r *response) streamWriter() Writer {
 	if r.writer == nil {
-		sw := &StreamWriter{}
+		sw := &streamWriter{}
 		r.httpResp.SetBodyStreamWriter(sw.write)
 		r.writer = sw
 	}

@@ -7,6 +7,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/eqto/api-server/websocket"
 	"github.com/eqto/dbm"
 	"github.com/eqto/go-json"
 	"github.com/valyala/fasthttp"
@@ -15,7 +16,7 @@ import (
 // Server ...
 type Server struct {
 	serv   *fasthttp.Server
-	wsServ *wsServer
+	wsServ *websocket.Server
 
 	routeMap map[string]map[string]*Route
 	proxies  []*Proxy
@@ -303,6 +304,10 @@ func (s *Server) defGroup() *Group {
 		s.stdGroup = s.Group(``)
 	}
 	return s.stdGroup
+}
+
+func (s *Server) HandleWebsocket(path string) *Websocket {
+	return s.defGroup().HandleWebsocket(path)
 }
 
 // New ...

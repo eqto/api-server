@@ -1,9 +1,12 @@
 package api
 
+import "github.com/eqto/api-server/websocket"
+
 type Websocket struct {
-	wsServ *wsServer
+	wsServ *websocket.Server
 }
 
-func (w *Websocket) OnMessage(fn func(ctx *WsContext, isBinary bool, data []byte)) {
-	w.wsServ.OnMessage(fn)
+func (w *Websocket) OnAccept(fn func(client *websocket.Client)) *Websocket {
+	w.wsServ.OnAccept(fn)
+	return w
 }

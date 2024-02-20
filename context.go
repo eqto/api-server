@@ -12,7 +12,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//Context ..
+// Context ..
 type Context interface {
 	URL() *url.URL
 	Method() string
@@ -23,7 +23,7 @@ type Context interface {
 	//WriteBody write to body and ignoring the next action
 	WriteBody(contentType string, body []byte) error
 	//WriteStream
-	WriteStream(filename, contentType string, writeFunc func(*StreamWriter)) error
+	WriteStream(filename, contentType string, writeFunc func(Writer)) error
 
 	//Status stop execution and return status and message
 	Status(status int, msg string) error
@@ -82,7 +82,7 @@ func (c *context) Write(value interface{}) error {
 	return nil
 }
 
-func (c *context) WriteStream(filename, contentType string, fn func(*StreamWriter)) error {
+func (c *context) WriteStream(filename, contentType string, fn func(Writer)) error {
 	c.resp.Header().Set(`Content-Disposition`, fmt.Sprintf(`attachment;filename="%s"`, filename))
 	c.resp.Header().Set(`Content-Type`, contentType)
 	sw := c.resp.streamWriter()
@@ -182,7 +182,7 @@ func (c *context) ContentType() string {
 	return c.req.Header().Get(`Content-Type`)
 }
 
-//Session ..
+// Session ..
 func (c *context) Session() Session {
 	return c.sess
 }

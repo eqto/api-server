@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	"github.com/eqto/api-server/websocket"
 )
 
 var (
@@ -51,7 +53,7 @@ func (g *Group) HandleWebsocket(path string) *Websocket {
 	route := g.getRoute(MethodGet, g.formatPath(path))
 	route.isWs = true
 	if g.s.wsServ == nil {
-		g.s.wsServ = newWsServer()
+		g.s.wsServ = websocket.NewServer()
 	}
 	return &Websocket{wsServ: g.s.wsServ}
 }
