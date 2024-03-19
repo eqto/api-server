@@ -42,7 +42,7 @@ func (r *Route) AddAction(f func(Context) error) Action {
 	return act
 }
 
-func (r *Route) ResetAction() *Route {
+func (r *Route) ResetActions() *Route {
 	r.action = []Action{}
 	return r
 }
