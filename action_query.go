@@ -194,8 +194,9 @@ func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interfac
 	values := []interface{}{}
 	for _, param := range q.qParams {
 		if strings.HasPrefix(param, `$session.`) {
-			val := ctx.sess.GetString(param[9:])
-			values = append(values, val)
+			values = append(values, ctx.sess.GetString(param[9:]))
+		} else if strings.HasPrefix(param, `$`) {			
+			values = append(values, ctx.vars.Get(param[1:]))
 		} else if strings.HasPrefix(param, q.arrayName+`[`) && strings.HasSuffix(param, `]`) {
 			if js, ok := item.(json.Object); ok {
 				val := js.Get(param[len(q.arrayName)+1 : len(param)-1])
