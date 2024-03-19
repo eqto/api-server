@@ -36,11 +36,15 @@ func (r *Route) AddQueryAction(query, params string) Action {
 	return act
 }
 
-// AddAction ...
 func (r *Route) AddAction(f func(Context) error) Action {
 	act := newFuncAction(f).AssignTo(`data`)
 	r.action = append(r.action, act)
 	return act
+}
+
+func (r *Route) ResetAction() *Route {
+	r.action = []Action{}
+	return r
 }
 
 func (r *Route) execute(s *Server, ctx *context) error {
