@@ -90,7 +90,9 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 				case `>`, `>=`, `<`, `<=`:
 					selectStmt.Where().And(fmt.Sprintf(`%s %s ?`, key, filter))
 					values = append(values, value)
-				// case `FULLTEXT`:
+				case `FULLTEXT`:
+					selectStmt.Where().And(fmt.Sprintf(`WHERE MATCH(%s) AGAINST(? IN BOOLEAN MODE)`, key))
+					values = append(values, value+`*`)
 				// 	fallthrough
 				default:
 					selectStmt.Where().And(fmt.Sprintf(`%s = ?`, key))
@@ -195,7 +197,7 @@ func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interfac
 	for _, param := range q.qParams {
 		if strings.HasPrefix(param, `$session.`) {
 			values = append(values, ctx.sess.GetString(param[9:]))
-		} else if strings.HasPrefix(param, `$`) {			
+		} else if strings.HasPrefix(param, `$`) {
 			values = append(values, ctx.vars.Get(param[1:]))
 		} else if strings.HasPrefix(param, q.arrayName+`[`) && strings.HasSuffix(param, `]`) {
 			if js, ok := item.(json.Object); ok {
