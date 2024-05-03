@@ -70,15 +70,15 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 			return nil, e
 		}
 
-		if filters := js.GetJSONObject(`filters`); filters != nil && len(filters) > 0 {
+		if filters := js.GetJSONObject(`filters`); len(filters) > 0 {
 			for key := range filters {
 				js := filters.GetJSONObject(key)
 				value := js.GetString(`value`)
 				filter := strings.ToUpper(js.GetString(`filter`))
 				switch filter {
 				case `date`:
-					selectStmt.Where().And(fmt.Sprintf(`%s >= ?`, key))
-					selectStmt.Where().And(fmt.Sprintf(`%s < ?`, key))
+					selectStmt.Where(fmt.Sprintf(`%s >= ?`, key))
+					selectStmt.Where(fmt.Sprintf(`%s < ?`, key))
 
 					values = append(values, value)
 
@@ -88,14 +88,14 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 				case `LIKE`:
 					fallthrough
 				case `>`, `>=`, `<`, `<=`:
-					selectStmt.Where().And(fmt.Sprintf(`%s %s ?`, key, filter))
+					selectStmt.Where(fmt.Sprintf(`%s %s ?`, key, filter))
 					values = append(values, value)
 				case `FULLTEXT`:
-					selectStmt.Where().And(fmt.Sprintf(`WHERE MATCH(%s) AGAINST(? IN BOOLEAN MODE)`, key))
+					selectStmt.Where(fmt.Sprintf(`MATCH(%s) AGAINST(? IN BOOLEAN MODE)`, key))
 					values = append(values, value+`*`)
 				// 	fallthrough
 				default:
-					selectStmt.Where().And(fmt.Sprintf(`%s = ?`, key))
+					selectStmt.Where(fmt.Sprintf(`%s = ?`, key))
 					values = append(values, value)
 				}
 
@@ -145,6 +145,7 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 			}
 			sql = ctx.s.cn.Driver().StatementString(selectStmt)
 		}
+		println(sql)
 		data, err = tx.Select(sql, values...)
 	case queryTypeGet:
 		sql := q.rawSql
