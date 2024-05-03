@@ -100,6 +100,10 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 				}
 
 			}
+		} else if filters := js.GetArray(`filters`); len(filters) > 0 {
+			for _, filter := range filters {
+				values = append(values, parseFilter(filter, selectStmt)...)
+			}
 		}
 		// Example:
 		// {
@@ -145,7 +149,6 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 			}
 			sql = ctx.s.cn.Driver().StatementString(selectStmt)
 		}
-		println(sql)
 		data, err = tx.Select(sql, values...)
 	case queryTypeGet:
 		sql := q.rawSql
@@ -191,6 +194,30 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		}
 	}
 	return data, nil
+}
+
+// return value
+func parseFilter(filter json.Object, selectStmt *stmt.Select) []interface{} {
+	name, value, strValue := filter.GetString(`name`), filter.Get(`value`), filter.GetString(`value`)
+
+	values := []interface{}{}
+
+	switch typ := strings.ToUpper(filter.GetStringOr(`type`, `=`)); typ {
+	case `FULLTEXT`:
+		selectStmt.Where(fmt.Sprintf(`MATCH(%s) AGAINST(? IN BOOLEAN MODE)`, name))
+		values = append(values, strValue+`*`)
+	case `DATE`:
+		selectStmt.Where(fmt.Sprintf(`%s >= ?`, name))
+		selectStmt.Where(fmt.Sprintf(`%s < ?`, name))
+		values = append(values, value)
+		time, _ := time.Parse(`2006-01-02`, strValue)
+		time = time.AddDate(0, 0, 1)
+		values = append(values, time.Format(`2006-01-02`))
+	default:
+		selectStmt.Where(fmt.Sprintf(`%s %s ?`, name, typ))
+		values = append(values, value)
+	}
+	return values
 }
 
 func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interface{}, error) {
