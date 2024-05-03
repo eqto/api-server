@@ -5,8 +5,8 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dgrr/websocket v0.1.1 h1:fg6irjiUyGRmqzJ1vwy3vRPv6PlIO7+eF4Q7oi+WDAo=
 github.com/dgrr/websocket v0.1.1/go.mod h1:d30hG8q3dQuz6eSwROXzIodSvPTNi52j1VvxrK7RWXc=
-github.com/eqto/dbm v0.18.4 h1:JXjzOouqB4q2AenSkCZzNZ+P8OBnU8GlAffyF+gqdms=
-github.com/eqto/dbm v0.18.4/go.mod h1:SjyGk61QPOHqJEdvwlIA8kp1+nPXsU+EvUEBgHO7NBI=
+github.com/eqto/dbm v0.18.5 h1:w3IN3p4c0Hcd51vMeej7LtGwZsSd9VMlqDd0Nx0B2w8=
+github.com/eqto/dbm v0.18.5/go.mod h1:SjyGk61QPOHqJEdvwlIA8kp1+nPXsU+EvUEBgHO7NBI=
 github.com/eqto/go-json v0.4.1 h1:Vge4sAVJkeJE1bN5xBv6bCosp5wLYvbzUP+MPBKgLk0=
 github.com/eqto/go-json v0.4.1/go.mod h1:n/ijyc7iZZV9bQr7+MuUQACos1TVUFBOc26VR7j5+js=
 github.com/gin-contrib/sse v0.1.0/go.mod h1:RHrZQHXnP2xjPF+u1gW/2HnVO7nvIa9PG3Gm+fLHvGI=
