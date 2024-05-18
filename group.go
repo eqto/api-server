@@ -105,6 +105,10 @@ func (g *Group) getRoute(method, path string) *Route {
 	return route
 }
 
+func (g *Group) RemoveRoute(method, path string) {
+	delete(g.s.routeMap[method], path)
+}
+
 func normalizePath(path string) string {
 	if normalizeRegex == nil {
 		normalizeRegex = regexp.MustCompile(`([A-Z]+)`)
