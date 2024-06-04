@@ -13,6 +13,8 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+type ServerOptions func(*Server)
+
 // Server ...
 type Server struct {
 	serv   *fasthttp.Server
@@ -28,6 +30,8 @@ type Server struct {
 	dbConnected bool
 	middlewares []*middlewareContainer
 	render      Render
+	options     []ServerOptions
+	timeout     time.Duration
 
 	logger *logger
 
@@ -222,8 +226,16 @@ func (s *Server) serve(ln net.Listener) error {
 			return e
 		}
 	}
+	for _, opt := range s.options {
+		opt(s)
+	}
+	timeout := s.timeout
+	if timeout == 0 {
+		timeout = 60 * time.Second
+	}
+
 	s.serv = &fasthttp.Server{Handler: fasthttp.CompressHandlerBrotliLevel(
-		fasthttp.TimeoutHandler(handler, 60*time.Second, `Timeout`),
+		fasthttp.TimeoutHandler(handler, timeout, `Timeout`),
 		fasthttp.CompressBrotliDefaultCompression,
 		fasthttp.CompressDefaultCompression,
 	),
@@ -311,9 +323,10 @@ func (s *Server) HandleWebsocket(path string) *Websocket {
 }
 
 // New ...
-func New() *Server {
+func New(opts ...ServerOptions) *Server {
 	s := &Server{
 		routeMap: make(map[string]map[string]*Route),
+		options:  opts,
 	}
 	s.SetLogger(log.Println, log.Println, log.Println, log.Println)
 
