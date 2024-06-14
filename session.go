@@ -2,10 +2,10 @@ package api
 
 import (
 	"fmt"
+	"reflect"
 	"strconv"
 )
 
-//Session ...
 type Session interface {
 	Put(key string, value interface{})
 	Get(key string) interface{}
@@ -48,12 +48,16 @@ func (s *session) GetString(key string) string {
 		return ``
 	}
 	switch val := val.(type) {
+	case float32:
+		return fmt.Sprintf(`%f`, val)
+	case float64:
+		return fmt.Sprintf(`%f`, val)
 	case int:
 		return strconv.Itoa(val)
 	case string:
 		return val
 	}
-	s.logger.W(fmt.Sprintf(`unable convert to string key:%s val: %v`, key, val))
+	s.logger.W(fmt.Sprintf(`unable convert to string key:%s val: %v type: %s`, key, val, reflect.TypeOf(val).String()))
 	return ``
 }
 
@@ -73,6 +77,7 @@ func (s *session) GetInt(key string) int {
 		}
 		return i
 	}
-	s.logger.W(fmt.Sprintf(`unable convert to string int:%s val: %v`, key, val))
+
+	s.logger.W(fmt.Sprintf(`unable convert to string int:%s val: %v type: %s`, key, val, reflect.TypeOf(val).String()))
 	return 0
 }
