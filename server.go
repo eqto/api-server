@@ -135,6 +135,10 @@ func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
 
+func (s *Server) RemoveRoute(method, path string) {
+	delete(s.routeMap[method], path)
+}
+
 func (s *Server) executeRoutes(ctx *context, path string) bool {
 	if route, ok := s.routeMap[ctx.Method()][path]; ok {
 		for _, m := range s.middlewares {
