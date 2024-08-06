@@ -116,6 +116,17 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 			if active := sort.GetString(`active`); active != `` {
 				selectStmt.OrderBy(fmt.Sprintf(`%s %s`, active, sort.GetStringOr(`direction`, `asc`)))
 			}
+		} else if sorts := js.GetArray(`sort`); len(sorts) > 0 {
+			sortStrings := []string{}
+			for _, sort := range sorts {
+				if active := sort.GetString(`active`); active != `` {
+					sortStrings = append(sortStrings, fmt.Sprintf(`%s %s`, active, sort.GetStringOr(`direction`, `asc`)))
+				}
+			}
+			if len(sortStrings) > 0 {
+				selectStmt.OrderBy(strings.Join(sortStrings, `,`))
+			}
+
 		}
 		// Example:
 		// {
