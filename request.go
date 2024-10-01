@@ -13,6 +13,7 @@ import (
 type Request interface {
 	Header() *RequestHeader
 	Method() string
+	Form() (*multipart.Form, error)
 	URL() *url.URL
 	JSON() json.Object
 	ValidJSON(names ...string) (json.Object, error)
