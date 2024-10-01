@@ -40,6 +40,10 @@ func (r *request) File(name string) (*multipart.FileHeader, error) {
 	return r.fastCtx.FormFile(name)
 }
 
+func (r *request) Form() (*multipart.Form, error) {
+	return r.fastCtx.MultipartForm()
+}
+
 func (r *request) Header() *RequestHeader {
 	return &RequestHeader{&r.fastCtx.Request.Header}
 }
