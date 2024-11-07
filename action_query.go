@@ -73,36 +73,13 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 		if filters := js.GetJSONObject(`filters`); len(filters) > 0 {
 			for key := range filters {
 				js := filters.GetJSONObject(key)
-				value := js.GetString(`value`)
-				filter := strings.ToUpper(js.GetString(`filter`))
-				switch filter {
-				case `date`:
-					selectStmt.Where(fmt.Sprintf(`%s >= ?`, key))
-					selectStmt.Where(fmt.Sprintf(`%s < ?`, key))
-
-					values = append(values, value)
-
-					time, _ := time.Parse(`2006-01-02`, value)
-					time = time.AddDate(0, 0, 1)
-					values = append(values, time.Format(`2006-01-02`))
-				case `LIKE`:
-					fallthrough
-				case `>`, `>=`, `<`, `<=`:
-					selectStmt.Where(fmt.Sprintf(`%s %s ?`, key, filter))
-					values = append(values, value)
-				case `FULLTEXT`:
-					selectStmt.Where(fmt.Sprintf(`MATCH(%s) AGAINST(? IN BOOLEAN MODE)`, key))
-					values = append(values, value+`*`)
-				// 	fallthrough
-				default:
-					selectStmt.Where(fmt.Sprintf(`%s = ?`, key))
-					values = append(values, value)
-				}
-
+				parsed := parseFilter(key, js.GetString(`value`), js.GetString(`type`), selectStmt)
+				values = append(values, parsed...)
 			}
 		} else if filters := js.GetArray(`filters`); len(filters) > 0 {
 			for _, filter := range filters {
-				values = append(values, parseFilter(filter, selectStmt)...)
+				parsed := parseFilter(filter.GetString(`name`), filter.GetString(`value`), filter.GetString(`type`), selectStmt)
+				values = append(values, parsed...)
 			}
 		}
 		// Example:
@@ -208,20 +185,18 @@ func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface
 }
 
 // return value
-func parseFilter(filter json.Object, selectStmt *stmt.Select) []interface{} {
-	name, value, strValue := filter.GetString(`name`), filter.Get(`value`), filter.GetString(`value`)
-
+func parseFilter(name, value, typ string, selectStmt *stmt.Select) []interface{} {
 	values := []interface{}{}
 
-	switch typ := strings.ToUpper(filter.GetStringOr(`type`, `=`)); typ {
+	switch strings.ToUpper(typ) {
 	case `FULLTEXT`:
 		selectStmt.Where(fmt.Sprintf(`MATCH(%s) AGAINST(? IN BOOLEAN MODE)`, name))
-		values = append(values, strValue+`*`)
+		values = append(values, value+`*`)
 	case `DATE`:
 		selectStmt.Where(fmt.Sprintf(`%s >= ?`, name))
 		selectStmt.Where(fmt.Sprintf(`%s < ?`, name))
-		values = append(values, value)
-		time, _ := time.Parse(`2006-01-02`, strValue)
+		time, _ := time.Parse(`2006-01-02`, value)
+		values = append(values, time.Format(`2006-01-02`))
 		time = time.AddDate(0, 0, 1)
 		values = append(values, time.Format(`2006-01-02`))
 	default:
