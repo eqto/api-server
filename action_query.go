@@ -200,6 +200,9 @@ func parseFilter(name, value, typ string, selectStmt *stmt.Select) []interface{}
 		time = time.AddDate(0, 0, 1)
 		values = append(values, time.Format(`2006-01-02`))
 	default:
+		if typ == `` {
+			typ = `=`
+		}
 		selectStmt.Where(fmt.Sprintf(`%s %s ?`, name, typ))
 		values = append(values, value)
 	}
