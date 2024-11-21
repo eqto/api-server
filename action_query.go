@@ -199,6 +199,14 @@ func parseFilter(name, value, typ string, selectStmt *stmt.Select) []interface{}
 		values = append(values, time.Format(`2006-01-02`))
 		time = time.AddDate(0, 0, 1)
 		values = append(values, time.Format(`2006-01-02`))
+	case `IN`:
+		vals := strings.Split(value, `,`)
+		names := []string{}
+		for _, val := range vals {
+			names = append(names, `?`)
+			values = append(values, strings.TrimSpace(val))
+		}
+		selectStmt.Where(fmt.Sprintf(`%s IN (%s)`, name, strings.Join(names, `,`)))
 	default:
 		if typ == `` {
 			typ = `=`
