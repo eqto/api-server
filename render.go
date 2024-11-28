@@ -12,7 +12,7 @@ func render(ctx Context) bool {
 			pmsg = &msg
 		}
 		data.Put(`status`, resp.StatusCode()).Put(`message`, *pmsg)
-		resp.setBody(data.ToBytes())
+		resp.setBody(data.Bytes())
 	}
 	return true
 }
