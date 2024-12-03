@@ -24,13 +24,12 @@ type Group struct {
 
 func (g *Group) formatPath(path string) string {
 	path = strings.TrimPrefix(path, `/`)
-	return fmt.Sprintf(`%s/%s`, g.prefixPath, path)
+	prefix := strings.TrimPrefix(fmt.Sprintf(`/%s`, g.prefixPath), `/`)
+	return fmt.Sprintf(`%s/%s`, prefix, path)
 }
 
 func (g *Group) SetPrefixPath(path string) {
-	path = strings.TrimPrefix(path, `/`)
-	path = strings.TrimSuffix(path, `/`)
-	g.prefixPath = `/` + path
+	g.prefixPath = strings.Trim(path, `/`)
 }
 
 func (g *Group) Get(path string) *Route {
