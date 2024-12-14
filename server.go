@@ -147,10 +147,14 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 					if e := m.f(ctx); e != nil {
 						ctx.setErr(e)
 						if m.secure {
-							ctx.StatusUnauthorized(`Authorization error: ` + e.Error())
+							if ctx.resp.httpResp.StatusCode() == 200 {
+								ctx.StatusUnauthorized(`Authorization error: ` + e.Error())
+							}
 						} else {
 							s.logger.W(e)
-							ctx.StatusInternalServerError(`Internal server error`)
+							if ctx.resp.httpResp.StatusCode() == 200 {
+								ctx.StatusInternalServerError(`Internal server error`)
+							}
 						}
 						return true
 					}
