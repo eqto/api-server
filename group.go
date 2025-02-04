@@ -25,6 +25,9 @@ type Group struct {
 func (g *Group) formatPath(path string) string {
 	path = strings.TrimPrefix(path, `/`)
 	prefix := strings.TrimPrefix(fmt.Sprintf(`/%s`, g.prefixPath), `/`)
+	if prefix != `` {
+		prefix = `/` + prefix
+	}
 	return fmt.Sprintf(`%s/%s`, prefix, path)
 }
 
