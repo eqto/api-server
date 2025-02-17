@@ -15,6 +15,7 @@ type Response interface {
 	Data() json.Object
 	Body() []byte
 	SetContentType(contentType string)
+	GetError() error
 
 	setBody(body []byte)
 	statusMessage() *string
@@ -31,6 +32,9 @@ type response struct {
 	writer   *streamWriter
 }
 
+func (r *response) GetError() error {
+	return r.err
+}
 func (r *response) Header() *ResponseHeader {
 	return &ResponseHeader{&r.httpResp.Header}
 }
