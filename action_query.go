@@ -1,7 +1,6 @@
 package api
 
 import (
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -10,6 +9,7 @@ import (
 	"github.com/eqto/dbm"
 	"github.com/eqto/dbm/stmt"
 	"github.com/eqto/go-json"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -124,8 +124,8 @@ func (q *actionQuery) executeItem(ctx *Context, values []interface{}) (interface
 
 	tx, e := ctx.Tx()
 	if e != nil {
-		ctx.logger().E(e)
-		return nil, errors.New(`Database connection failed`)
+		ctx.debugLog.logErr(errors.Wrap(e, `database connection failed`))
+		return nil, errors.New(`database connection failed`)
 	}
 
 	switch q.qType {
@@ -164,9 +164,10 @@ func (q *actionQuery) executeItem(ctx *Context, values []interface{}) (interface
 	}
 	if err != nil {
 		if dbm.IsErrDuplicate(err) {
+			ctx.debugLog.logErr(errors.Wrap(e, `duplicate entry`))
 			return nil, errors.New(`duplicate entry`)
 		}
-		ctx.logger().E(fmt.Sprintf(`%s. Query:%s`, err.Error(), q.rawSql))
+		ctx.debugLog.logErr(fmt.Errorf(`%s. Query: %s`, err, q.rawSql))
 		return nil, errExecutingQuery
 	}
 	switch q.qType {

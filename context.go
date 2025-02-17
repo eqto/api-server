@@ -26,7 +26,8 @@ type Context struct {
 
 	stdTx *dbm.Tx
 
-	values map[string]interface{}
+	debugLog debugLog
+	values   map[string]interface{}
 }
 
 func (c *Context) Write(value interface{}) error {
@@ -221,16 +222,14 @@ func (c *Context) setErr(err error) {
 	}
 }
 
-func (c *Context) logger() *logger {
-	return c.s.logger
-}
-
 func newContext(s *Server, fastCtx *fasthttp.RequestCtx) (*Context, error) {
 	ctx := &Context{
 		s:       s,
 		values:  make(map[string]interface{}),
 		sess:    &Session{logger: s.logger},
 		fastCtx: fastCtx,
+		req:     &Request{},
+		resp:    &Response{},
 	}
 	ctx.resp.httpResp = &fastCtx.Response
 	ctx.req.fastCtx = fastCtx

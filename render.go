@@ -12,6 +12,9 @@ func render(ctx *Context) bool {
 			pmsg = &msg
 		}
 		data.Put(`status`, resp.StatusCode()).Put(`message`, *pmsg)
+		if len(ctx.debugLog) > 0 {
+			data.Put(`debug`, ctx.debugLog.Strings())
+		}
 		resp.setBody(data.Bytes())
 	}
 	return true
