@@ -21,7 +21,7 @@ func main() {
 
 }
 
-//Auth ..
+// Auth ..
 func Auth(ctx api.RequestCtx) error {
 	js, _ := json.Parse(ctx.Body())
 
@@ -34,7 +34,7 @@ func Auth(ctx api.RequestCtx) error {
 	return nil
 }
 
-//Home this endpoint will executed after AuthMiddleware pass
-func Home(ctx api.Context) (interface{}, error) {
+// Home this endpoint will executed after AuthMiddleware pass
+func Home(ctx *api.Context) (interface{}, error) {
 	return `welcome`, nil
 }

@@ -1,8 +1,8 @@
 package api
 
-type Render func(Context) bool
+type Render func(*Context) bool
 
-func render(ctx Context) bool {
+func render(ctx *Context) bool {
 	resp := ctx.Response()
 	data := resp.Data()
 	if data != nil {

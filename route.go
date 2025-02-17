@@ -36,7 +36,7 @@ func (r *Route) AddQueryAction(query, params string) Action {
 	return act
 }
 
-func (r *Route) AddAction(f func(Context) error) Action {
+func (r *Route) AddAction(f func(*Context) error) Action {
 	act := newFuncAction(f).AssignTo(`data`)
 	r.action = append(r.action, act)
 	return act
@@ -47,7 +47,7 @@ func (r *Route) ResetActions() *Route {
 	return r
 }
 
-func (r *Route) execute(s *Server, ctx *context) error {
+func (r *Route) execute(s *Server, ctx *Context) error {
 	defer func() {
 		if r := recover(); r != nil {
 			switch r := r.(type) {

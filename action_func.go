@@ -5,7 +5,7 @@ import "errors"
 type actionFunc struct {
 	Action
 	prop string
-	f    func(Context) error
+	f    func(*Context) error
 }
 
 func (f *actionFunc) AssignTo(prop string) Action {
@@ -13,7 +13,7 @@ func (f *actionFunc) AssignTo(prop string) Action {
 	return f
 }
 
-func (f *actionFunc) execute(ctx *context) error {
+func (f *actionFunc) execute(ctx *Context) error {
 	if f.f == nil {
 		return errors.New(`nil func`)
 	}
@@ -26,6 +26,6 @@ func (f *actionFunc) params() []string {
 	return nil
 }
 
-func newFuncAction(f func(Context) error) *actionFunc {
+func newFuncAction(f func(*Context) error) *actionFunc {
 	return &actionFunc{f: f}
 }

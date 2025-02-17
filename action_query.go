@@ -50,7 +50,7 @@ func (q *actionQuery) params() []string {
 	return q.qParams
 }
 
-func (q *actionQuery) executeItem(ctx *context, values []interface{}) (interface{}, error) {
+func (q *actionQuery) executeItem(ctx *Context, values []interface{}) (interface{}, error) {
 	var data interface{}
 	var err error
 	var selectStmt *stmt.Select
@@ -217,7 +217,7 @@ func parseFilter(name, value, typ string, selectStmt *stmt.Select) []interface{}
 	return values
 }
 
-func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interface{}, error) {
+func (q *actionQuery) populateValues(ctx *Context, item interface{}) ([]interface{}, error) {
 	values := []interface{}{}
 	for _, param := range q.qParams {
 		if strings.HasPrefix(param, `$session.`) {
@@ -242,7 +242,7 @@ func (q *actionQuery) populateValues(ctx *context, item interface{}) ([]interfac
 	return values, nil
 }
 
-func (q *actionQuery) execute(ctx *context) error {
+func (q *actionQuery) execute(ctx *Context) error {
 	if q.arrayName != `` { //execute array
 		result := []interface{}{}
 

@@ -21,24 +21,26 @@ func main() {
 	log.Println(`Server stopped`)
 }
 
-//Hello endpoint http://host:port/Hello
+// Hello endpoint http://host:port/Hello
 // output:
-// {
-//     "data": "hello world",
-//     "message": "success",
-//     "status": 0
-// }
-func Hello(ctx api.Context) (interface{}, error) {
+//
+//	{
+//	    "data": "hello world",
+//	    "message": "success",
+//	    "status": 0
+//	}
+func Hello(ctx *api.Context) (interface{}, error) {
 	return `hello world`, nil
 }
 
-//HelloWorld endpoint http://host:port/HelloWorld if normalize false, or http://host:port/hello_world if normalize true
+// HelloWorld endpoint http://host:port/HelloWorld if normalize false, or http://host:port/hello_world if normalize true
 // output:
-// {
-//     "data": "this is error",
-//     "message": "success",
-//     "status": 500
-// }
-func HelloWorld(ctx api.Context) (interface{}, error) {
+//
+//	{
+//	    "data": "this is error",
+//	    "message": "success",
+//	    "status": 500
+//	}
+func HelloWorld(ctx *api.Context) (interface{}, error) {
 	return nil, errors.New(`this is error`)
 }

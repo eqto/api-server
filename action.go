@@ -1,10 +1,10 @@
 package api
 
-//Action ...
+// Action ...
 type Action interface {
 	AssignTo(prop string) Action
 
-	execute(*context) error
+	execute(*Context) error
 	property() string
 	params() []string
 }

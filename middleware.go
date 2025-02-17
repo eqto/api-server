@@ -1,16 +1,16 @@
 package api
 
-//Middleware ..
+// Middleware ..
 type Middleware interface {
 	//ForGroup set name for this middleware, this middleware only used by route that requiring the same name
 	ForGroup(string) Middleware
 	Secure() Middleware
 }
 
-//middlewareContainer
+// middlewareContainer
 type middlewareContainer struct {
 	Middleware
-	f      func(Context) error
+	f      func(*Context) error
 	secure bool
 	group  string
 }

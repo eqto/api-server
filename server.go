@@ -15,7 +15,6 @@ import (
 
 type ServerOptions func(*Server)
 
-// Server ...
 type Server struct {
 	serv   *fasthttp.Server
 	wsServ *websocket.Server
@@ -24,8 +23,7 @@ type Server struct {
 	proxies  []*Proxy
 	files    []file
 
-	normalize bool
-
+	normalize   bool
 	cn          *dbm.Connection
 	dbConnected bool
 	middlewares []*middlewareContainer
@@ -75,7 +73,7 @@ func (s *Server) Connect() error {
 }
 
 // AddMiddleware ..
-func (s *Server) AddMiddleware(f func(Context) error) Middleware {
+func (s *Server) AddMiddleware(f func(*Context) error) Middleware {
 	return s.defGroup().AddMiddleware(f)
 }
 
@@ -114,11 +112,11 @@ func (s *Server) Post(path string) *Route {
 	return s.defGroup().Post(path)
 }
 
-func (s *Server) PostAction(f func(Context) error) *Route {
+func (s *Server) PostAction(f func(*Context) error) *Route {
 	return s.defGroup().PostAction(f)
 }
 
-func (s *Server) PostSecureAction(f func(Context) error) *Route {
+func (s *Server) PostSecureAction(f func(*Context) error) *Route {
 	return s.defGroup().PostSecureAction(f)
 }
 
@@ -126,7 +124,7 @@ func (s *Server) Get(path string) *Route {
 	return s.defGroup().Get(path)
 }
 
-func (s *Server) GetAction(f func(Context) error) *Route {
+func (s *Server) GetAction(f func(*Context) error) *Route {
 	return s.defGroup().GetAction(f)
 }
 
@@ -139,7 +137,7 @@ func (s *Server) RemoveRoute(method, path string) {
 	delete(s.routeMap[method], path)
 }
 
-func (s *Server) executeRoutes(ctx *context, path string) bool {
+func (s *Server) executeRoutes(ctx *Context, path string) bool {
 	if route, ok := s.routeMap[ctx.Method()][path]; ok {
 		for _, m := range s.middlewares {
 			if m.group == `` || m.group == route.group {
@@ -176,7 +174,7 @@ func (s *Server) executeRoutes(ctx *context, path string) bool {
 	return false
 }
 
-func (s *Server) executeProxies(ctx *context, fastCtx *fasthttp.RequestCtx, path string) bool {
+func (s *Server) executeProxies(ctx *Context, fastCtx *fasthttp.RequestCtx, path string) bool {
 	for _, proxy := range s.proxies {
 		if newPath, ok := proxy.translate(path); ok {
 			if e := proxy.execute(s, fastCtx, newPath); e != nil {
