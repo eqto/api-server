@@ -3,26 +3,17 @@ package api
 import "github.com/valyala/fasthttp"
 
 const (
-	//MethodGet GET
-	MethodGet string = fasthttp.MethodGet
-	//MethodPost POST
+	MethodGet  string = fasthttp.MethodGet
 	MethodPost string = fasthttp.MethodPost
 
-	//StatusBadRequest ...
-	StatusBadRequest = fasthttp.StatusBadRequest
-	//StatusUnauthorized ...
+	StatusBadRequest   = fasthttp.StatusBadRequest
 	StatusUnauthorized = fasthttp.StatusUnauthorized
-	//StatusNotFound ...
-	StatusForbidden = fasthttp.StatusForbidden
-	//StatusNotFound ...
-	StatusNotFound = fasthttp.StatusNotFound
-	//StatusOK ...
-	StatusOK = 200
+	StatusForbidden    = fasthttp.StatusForbidden
+	StatusNotFound     = fasthttp.StatusNotFound
+	StatusOK           = fasthttp.StatusOK
 
-	//StatusInternalServerError ...
 	StatusInternalServerError = fasthttp.StatusInternalServerError
 	StatusServiceUnavailable  = fasthttp.StatusServiceUnavailable
 
-	//StatusBadGateway ...
-	StatusBadGateway = 502
+	StatusBadGateway = fasthttp.StatusBadGateway
 )
