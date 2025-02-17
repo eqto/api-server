@@ -21,7 +21,7 @@ type Context struct {
 	req  *Request
 	resp *Response
 
-	sess *session
+	sess *Session
 
 	vars json.Object
 
@@ -139,7 +139,7 @@ func (c *Context) ContentType() string {
 }
 
 // Session ..
-func (c *Context) Session() Session {
+func (c *Context) Session() *Session {
 	return c.sess
 }
 
@@ -235,7 +235,7 @@ func newContext(s *Server, fastCtx *fasthttp.RequestCtx) (*Context, error) {
 	ctx := &Context{
 		s:       s,
 		values:  make(map[string]interface{}),
-		sess:    &session{logger: s.logger},
+		sess:    &Session{logger: s.logger},
 		lockCn:  sync.Mutex{},
 		fastCtx: fastCtx,
 	}

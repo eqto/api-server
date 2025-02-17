@@ -6,42 +6,33 @@ import (
 	"strconv"
 )
 
-type Session interface {
-	Put(key string, value interface{})
-	Get(key string) interface{}
-	Remove(key string)
-	GetInt(key string) int
-	GetString(key string) string
-}
-
-type session struct {
-	Session
+type Session struct {
 	logger *logger
 	val    map[string]interface{}
 }
 
-func (s *session) init() {
+func (s *Session) init() {
 	if s.val == nil {
 		s.val = make(map[string]interface{})
 	}
 }
 
-func (s *session) Remove(key string) {
+func (s *Session) Remove(key string) {
 	s.init()
 	delete(s.val, key)
 }
 
-func (s *session) Put(key string, value interface{}) {
+func (s *Session) Put(key string, value interface{}) {
 	s.init()
 	s.val[key] = value
 }
 
-func (s *session) Get(key string) interface{} {
+func (s *Session) Get(key string) interface{} {
 	s.init()
 	return s.val[key]
 }
 
-func (s *session) GetString(key string) string {
+func (s *Session) GetString(key string) string {
 	s.init()
 	val, ok := s.val[key]
 	if !ok || val == nil {
@@ -61,7 +52,7 @@ func (s *session) GetString(key string) string {
 	return ``
 }
 
-func (s *session) GetInt(key string) int {
+func (s *Session) GetInt(key string) int {
 	s.init()
 	val, ok := s.val[key]
 	if !ok || val == nil {
