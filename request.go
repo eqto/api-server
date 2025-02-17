@@ -9,47 +9,33 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// Request ..
-type Request interface {
-	Header() *RequestHeader
-	Method() string
-	Form() (*multipart.Form, error)
-	URL() *url.URL
-	JSON() json.Object
-	ValidJSON(names ...string) (json.Object, error)
-	Body() []byte
-	File(name string) (*multipart.FileHeader, error)
-	QueryParam(name string) string
-}
-
-type request struct {
-	Request
+type Request struct {
 	fastCtx *fasthttp.RequestCtx
 	js      json.Object
 	url     *url.URL
 }
 
-func (r *request) Method() string {
+func (r *Request) Method() string {
 	return string(r.fastCtx.Method())
 }
 
-func (r *request) QueryParam(name string) string {
+func (r *Request) QueryParam(name string) string {
 	return r.url.Query().Get(name)
 }
 
-func (r *request) File(name string) (*multipart.FileHeader, error) {
+func (r *Request) File(name string) (*multipart.FileHeader, error) {
 	return r.fastCtx.FormFile(name)
 }
 
-func (r *request) Form() (*multipart.Form, error) {
+func (r *Request) Form() (*multipart.Form, error) {
 	return r.fastCtx.MultipartForm()
 }
 
-func (r *request) Header() *RequestHeader {
+func (r *Request) Header() *RequestHeader {
 	return &RequestHeader{&r.fastCtx.Request.Header}
 }
 
-func (r *request) URL() *url.URL {
+func (r *Request) URL() *url.URL {
 	if r.url == nil {
 		u, e := url.Parse(string(r.fastCtx.URI().FullURI()))
 		if e != nil {
@@ -60,7 +46,7 @@ func (r *request) URL() *url.URL {
 	return r.url
 }
 
-func (r *request) JSON() json.Object {
+func (r *Request) JSON() json.Object {
 	if r.js == nil {
 		body := r.Body()
 		if body != nil {
@@ -75,7 +61,7 @@ func (r *request) JSON() json.Object {
 	return r.js.Clone()
 }
 
-func (r *request) ValidJSON(names ...string) (json.Object, error) {
+func (r *Request) ValidJSON(names ...string) (json.Object, error) {
 	js := r.JSON()
 	for _, name := range names {
 		if !js.Has(name) {
@@ -85,11 +71,11 @@ func (r *request) ValidJSON(names ...string) (json.Object, error) {
 	return js, nil
 }
 
-func (r *request) Body() []byte {
+func (r *Request) Body() []byte {
 	return r.fastCtx.Request.Body()
 }
 
-func (r *request) get(key string) interface{} {
+func (r *Request) get(key string) interface{} {
 	js := r.JSON()
 	if js.Has(key) {
 		return js.Get(key)

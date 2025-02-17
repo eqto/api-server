@@ -12,54 +12,13 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// type Context interface {
-// 	URL() *url.URL
-// 	Method() string
-// 	ContentType() string
-// 	RemoteIP() string
-
-// 	Write(value interface{}) error
-// 	//WriteBody write to body and ignoring the next action
-// 	WriteBody(contentType string, body []byte) error
-// 	//WriteStream
-// 	WriteStream(filename, contentType string, writeFunc func(Writer)) error
-
-// 	//Status stop execution and return status and message
-// 	Status(status int, msg string) error
-// 	//Error stop execution, rollback database transaction, and return status and message
-// 	Error(status int, msg string) error
-
-// 	//StatusBadRequest 400
-// 	StatusBadRequest(msg string) error
-// 	//StatusUnauthorized 401
-// 	StatusUnauthorized(msg string) error
-// 	//StatusUnauthorized 403
-// 	StatusForbidden(msg string) error
-// 	//StatusNotFound 404
-// 	StatusNotFound(msg string) error
-// 	StatusServiceUnavailable(msg string) error
-// 	StatusInternalServerError(msg string) error
-
-// 	Redirect(url string) error
-
-// 	Request() Request
-// 	RequiredParams(names string) (json.Object, error)
-// 	Response() Response
-
-// 	Database() (*dbm.Connection, error)
-// 	Tx() (*dbm.Tx, error)
-// 	Session() Session
-// 	SetValue(name string, value interface{})
-// 	GetValue(name string) interface{}
-// }
-
 type Context struct {
 	s       *Server
 	fastCtx *fasthttp.RequestCtx
 
 	property string
 
-	req  request
+	req  *Request
 	resp *Response
 
 	sess *session
@@ -184,8 +143,8 @@ func (c *Context) Session() Session {
 	return c.sess
 }
 
-func (c *Context) Request() Request {
-	return &c.req
+func (c *Context) Request() *Request {
+	return c.req
 }
 func (c *Context) RequiredParams(names string) (json.Object, error) {
 	split := strings.Split(names, `,`)
