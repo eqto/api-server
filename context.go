@@ -60,7 +60,7 @@ type Context struct {
 	property string
 
 	req  request
-	resp response
+	resp *Response
 
 	sess *session
 
@@ -202,8 +202,8 @@ func (c *Context) RequiredParams(names string) (json.Object, error) {
 	return jsResp, nil
 }
 
-func (c *Context) Response() Response {
-	return &c.resp
+func (c *Context) Response() *Response {
+	return c.resp
 }
 
 func (c *Context) SetValue(name string, value interface{}) {
