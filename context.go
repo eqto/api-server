@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"sync"
 
 	"github.com/eqto/dbm"
 	"github.com/eqto/go-json"
@@ -25,8 +24,7 @@ type Context struct {
 
 	vars json.Object
 
-	stdTx  *dbm.Tx
-	lockCn sync.Mutex
+	stdTx *dbm.Tx
 
 	values map[string]interface{}
 }
@@ -112,8 +110,6 @@ func (c *Context) Database() (*dbm.Connection, error) {
 }
 
 func (c *Context) Tx() (*dbm.Tx, error) {
-	c.lockCn.Lock()
-	defer c.lockCn.Unlock()
 	cn := c.s.Database()
 	if cn != nil && c.stdTx == nil {
 		tx, e := cn.Begin()
@@ -180,8 +176,6 @@ func (c *Context) closeTx() {
 	if c.stdTx == nil {
 		return
 	}
-	c.lockCn.Lock()
-	defer c.lockCn.Unlock()
 	if c.resp.err != nil {
 		c.stdTx.Rollback()
 	} else {
@@ -236,7 +230,6 @@ func newContext(s *Server, fastCtx *fasthttp.RequestCtx) (*Context, error) {
 		s:       s,
 		values:  make(map[string]interface{}),
 		sess:    &Session{logger: s.logger},
-		lockCn:  sync.Mutex{},
 		fastCtx: fastCtx,
 	}
 	ctx.resp.httpResp = &fastCtx.Response
