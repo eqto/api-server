@@ -35,6 +35,10 @@ func (g *Group) SetPrefixPath(path string) {
 	g.prefixPath = strings.Trim(path, `/`)
 }
 
+func (g *Group) GetPrefixPath() string {
+	return g.prefixPath
+}
+
 func (g *Group) Get(path string) *Route {
 	return g.getRoute(MethodGet, g.formatPath(path))
 }
