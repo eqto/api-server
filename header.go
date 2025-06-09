@@ -1,6 +1,8 @@
 package api
 
 import (
+	"fmt"
+
 	"github.com/valyala/fasthttp"
 )
 
@@ -9,6 +11,7 @@ type RequestHeader struct {
 }
 
 func (r *RequestHeader) header() *fasthttp.RequestHeader {
+	fmt.Println(`fast is nil`, r.fastCtx == nil)
 	if r.fastCtx != nil {
 		return &r.fastCtx.Request.Header
 	}
@@ -16,6 +19,7 @@ func (r *RequestHeader) header() *fasthttp.RequestHeader {
 }
 
 func (r *RequestHeader) Get(key string) string {
+	fmt.Println(r.header().Peek(key))
 	if val := r.header().Peek(key); val != nil {
 		return string(val)
 	}
@@ -35,6 +39,10 @@ func (r *RequestHeader) RemoteIP() string {
 		return string(val)
 	}
 	return ``
+}
+
+func (r *RequestHeader) String() string {
+	return r.fastCtx.Request.Header.String()
 }
 
 type ResponseHeader struct {

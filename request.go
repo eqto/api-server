@@ -27,7 +27,6 @@ func (r *request) Header() *RequestHeader {
 	httpHeader := &fasthttp.RequestHeader{}
 	r.fastCtx.Request.Header.CopyTo(httpHeader)
 
-	// return &RequestHeader{ fastHeader: httpHeader}
 	return &RequestHeader{fastCtx: r.fastCtx}
 }
 
