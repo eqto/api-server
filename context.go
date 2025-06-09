@@ -11,7 +11,6 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//Context ..
 type Context interface {
 	Session() Session
 	Request() Request
@@ -38,7 +37,6 @@ type context struct {
 	values map[string]interface{}
 }
 
-//Session ..
 func (c *context) Session() Session {
 	return c.sess
 }
@@ -101,22 +99,23 @@ func (c *context) put(property string, value interface{}) {
 	}
 }
 
-func newContext(s *Server, req *fasthttp.Request, resp *fasthttp.Response, cn *db.Connection) (*context, error) {
+func newContext(s *Server, fastCtx *fasthttp.RequestCtx, cn *db.Connection) (*context, error) {
+	httpReq := &fastCtx.Request
 	ctx := &context{
 		s:      s,
-		req:    request{httpReq: req},
-		resp:   response{httpResp: resp},
+		req:    request{fastCtx: fastCtx},
+		resp:   response{fastResp: &fastCtx.Response},
 		cn:     cn,
 		values: make(map[string]interface{}),
 		sess:   &session{},
 		lockCn: sync.Mutex{},
 	}
-	url, e := url.Parse(string(req.URI().FullURI()))
+	url, e := url.Parse(string(httpReq.URI().FullURI()))
 	if url == nil {
-		return nil, errors.Wrap(e, `invalid url `+string(req.RequestURI()))
+		return nil, errors.Wrap(e, `invalid url `+string(httpReq.RequestURI()))
 	}
 	ctx.req.url = url
-	ctx.req.body = req.Body()
+	ctx.req.body = httpReq.Body()
 
 	return ctx, nil
 }

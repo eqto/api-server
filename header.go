@@ -4,39 +4,47 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//RequestHeader ...
 type RequestHeader struct {
-	httpHeader *fasthttp.RequestHeader
+	fastCtx *fasthttp.RequestCtx
 }
 
-//Get ..
+func (r *RequestHeader) header() *fasthttp.RequestHeader {
+	if r.fastCtx != nil {
+		return &r.fastCtx.Request.Header
+	}
+	return &fasthttp.RequestHeader{}
+}
+
 func (r *RequestHeader) Get(key string) string {
-	if val := r.httpHeader.Peek(key); val != nil {
+	if val := r.header().Peek(key); val != nil {
 		return string(val)
 	}
 	return ``
 }
 
-//GetOrNil ..
 func (r *RequestHeader) GetOrNil(key string) *string {
-	if val := r.httpHeader.Peek(key); val != nil {
+	if val := r.header().Peek(key); val != nil {
 		str := string(val)
 		return &str
 	}
 	return nil
 }
 
-//ResponseHeader ...
+func (r *RequestHeader) RemoteIP() string {
+	if val := r.fastCtx.RemoteIP(); val != nil {
+		return string(val)
+	}
+	return ``
+}
+
 type ResponseHeader struct {
 	httpHeader *fasthttp.ResponseHeader
 }
 
-//Add ..
 func (r *ResponseHeader) Add(key, value string) {
 	r.httpHeader.Add(key, value)
 }
 
-//Set ..
 func (r *ResponseHeader) Set(key, value string) {
 	r.httpHeader.Set(key, value)
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//Request ..
 type Request interface {
 	Method() string
 	URL() *url.URL
@@ -18,20 +17,22 @@ type Request interface {
 
 type request struct {
 	Request
-	httpReq *fasthttp.Request
+	fastCtx *fasthttp.RequestCtx
 	url     *url.URL
 	body    []byte
 	js      json.Object
 }
 
 func (r *request) Header() *RequestHeader {
-	header := &RequestHeader{httpHeader: &fasthttp.RequestHeader{}}
-	r.httpReq.Header.CopyTo(header.httpHeader)
-	return header
+	httpHeader := &fasthttp.RequestHeader{}
+	r.fastCtx.Request.Header.CopyTo(httpHeader)
+
+	// return &RequestHeader{ fastHeader: httpHeader}
+	return &RequestHeader{fastCtx: r.fastCtx}
 }
 
 func (r *request) Method() string {
-	return string(r.httpReq.Header.Method())
+	return string(r.fastCtx.Request.Header.Method())
 }
 
 func (r *request) URL() *url.URL {

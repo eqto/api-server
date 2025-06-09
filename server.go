@@ -16,7 +16,6 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-//Server ...
 type Server struct {
 	serv *fasthttp.Server
 
@@ -40,18 +39,15 @@ type Server struct {
 	logE func(v ...interface{})
 }
 
-//Database ...
 func (s *Server) Database() *db.Connection {
 	return s.cn
 }
 
-//OpenDatabase call SetDatabase and Connect
 func (s *Server) OpenDatabase(driver, host string, port int, username, password, name string) error {
 	s.SetDatabase(driver, host, port, username, password, name)
 	return s.Connect()
 }
 
-//Connect ...
 func (s *Server) Connect() error {
 	if e := s.cn.Connect(); e != nil {
 		return e
@@ -60,32 +56,26 @@ func (s *Server) Connect() error {
 	return nil
 }
 
-//SetDatabase ...
 func (s *Server) SetDatabase(driver, host string, port int, username, password, name string) {
 	s.cn, _ = db.NewConnection(driver, host, port, username, password, name)
 }
 
-//AddMiddleware ..
 func (s *Server) AddMiddleware(f func(Context) error) {
 	s.middleware = append(s.middleware, middlewareContainer{f: f})
 }
 
-//AddSecureMiddleware ..
 func (s *Server) AddSecureMiddleware(f func(Context) error) {
 	s.middleware = append(s.middleware, middlewareContainer{f: f, secure: true})
 }
 
-//AddFinalHandler ..
 func (s *Server) AddFinalHandler(f func(ctx Context)) {
 	s.finalHandler = append(s.finalHandler, f)
 }
 
-//AddRouteAuthenticator ..
 func (s *Server) AddRouteAuthenticator(a RouteAuthenticator) {
 	s.routeAuthenticator = append(s.routeAuthenticator, a)
 }
 
-//Proxy ...
 func (s *Server) Proxy(path, dest string) error {
 	p, e := newProxy(path, dest)
 	if e != nil {
@@ -95,7 +85,7 @@ func (s *Server) Proxy(path, dest string) error {
 	return nil
 }
 
-//FileRoute serve static file. Path parameter to determine url to be processed. Dest parameter will find directory of the file reside. RedirectTo parameter to redirect non existing file, this param can be used for SPA (ex. index.html).
+// FileRoute serve static file. Path parameter to determine url to be processed. Dest parameter will find directory of the file reside. RedirectTo parameter to redirect non existing file, this param can be used for SPA (ex. index.html).
 func (s *Server) FileRoute(path, dest, redirectTo string) error {
 	f, e := newFile(path, dest, redirectTo)
 	if e != nil {
@@ -105,7 +95,6 @@ func (s *Server) FileRoute(path, dest, redirectTo string) error {
 	return nil
 }
 
-//FileRouteRemove ...
 func (s *Server) FileRouteRemove(path string) error {
 	for i, file := range s.files {
 		if file.path == path {
@@ -116,7 +105,6 @@ func (s *Server) FileRouteRemove(path string) error {
 	return nil
 }
 
-//SetRoute ...
 func (s *Server) SetRoute(method, path string, route *Route) {
 	if s.routeMap == nil {
 		s.routeMap = make(map[string]map[string]*Route)
@@ -130,7 +118,7 @@ func (s *Server) SetRoute(method, path string, route *Route) {
 	s.debug(fmt.Sprintf(`add route %s %s`, method, path))
 }
 
-//AddFuncRoute add route with single func action. When secure is true, this route will validated using auth middlewares if any.
+// AddFuncRoute add route with single func action. When secure is true, this route will validated using auth middlewares if any.
 func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure bool) (*Route, error) {
 	ptr := reflect.ValueOf(f).Pointer()
 	name := runtime.FuncForPC(ptr).Name()
@@ -149,7 +137,6 @@ func (s *Server) AddFuncRoute(f func(ctx Context) (interface{}, error), secure b
 	return route, nil
 }
 
-//AddPostRoute ..
 func (s *Server) AddPostRoute(path string, f func(ctx Context) (interface{}, error), secure bool) (*Route, error) {
 	route := NewRoute()
 	route.secure = secure
@@ -161,7 +148,7 @@ func (s *Server) AddPostRoute(path string, f func(ctx Context) (interface{}, err
 	return route, nil
 }
 
-//AddQueryRoute add route with single query action. When secure is true, this route will validated using auth middlewares if any.
+// AddQueryRoute add route with single query action. When secure is true, this route will validated using auth middlewares if any.
 func (s *Server) AddQueryRoute(path, query, params string, secure bool) (*Route, error) {
 	route := NewRoute()
 	if _, e := route.AddQueryAction(query, params, `data`); e != nil {
@@ -171,7 +158,6 @@ func (s *Server) AddQueryRoute(path, query, params string, secure bool) (*Route,
 	return route, nil
 }
 
-//GetRoute ...
 func (s *Server) GetRoute(method, path string) (*Route, error) {
 	method = strings.ToUpper(method)
 	if r, ok := s.routeMap[method][path]; ok {
@@ -180,7 +166,7 @@ func (s *Server) GetRoute(method, path string) (*Route, error) {
 	return nil, fmt.Errorf(`route %s %s not found`, method, path)
 }
 
-//NormalizeFunc if yes from this and beyond all Func added will renamed to lowercase, separated with underscore. Ex: HelloWorld registered as hello_world
+// NormalizeFunc if yes from this and beyond all Func added will renamed to lowercase, separated with underscore. Ex: HelloWorld registered as hello_world
 func (s *Server) NormalizeFunc(n bool) {
 	s.normalize = n
 }
@@ -243,10 +229,11 @@ func (s *Server) execute(fastCtx *fasthttp.RequestCtx, ctx *context) error {
 	return ctx.resp.err
 }
 
-//Serve ..
 func (s *Server) Serve(port int) error {
 	handler := func(fastCtx *fasthttp.RequestCtx) {
-		ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response, s.cn)
+		fastCtx.RemoteIP()
+		// ctx, e := newContext(s, &fastCtx.Request, &fastCtx.Response, s.cn)
+		ctx, e := newContext(s, fastCtx, s.cn)
 		if e != nil {
 			s.logW(e)
 			fastCtx.WriteString(e.Error())
@@ -258,7 +245,7 @@ func (s *Server) Serve(port int) error {
 			h(ctx)
 		}
 		if ctx.resp.json != nil {
-			ctx.resp.httpResp.Header.Set(`Content-type`, `application/json`)
+			ctx.resp.fastResp.Header.Set(`Content-type`, `application/json`)
 			ctx.resp.json.Put(`status`, ctx.resp.getStatus())
 			ctx.resp.json.Put(`message`, ctx.resp.getMessage())
 
@@ -283,7 +270,6 @@ func (s *Server) Serve(port int) error {
 	return s.serv.ListenAndServe(fmt.Sprintf(`:%d`, port))
 }
 
-//Shutdown ..
 func (s *Server) Shutdown() error {
 	if s.serv != nil {
 		s.serv.DisableKeepalive = true
@@ -295,17 +281,14 @@ func (s *Server) Shutdown() error {
 	return nil
 }
 
-//SetProduction ...
 func (s *Server) SetProduction() {
 	s.isProduction = true
 }
 
-//SetDebug ...
 func (s *Server) SetDebug() {
 	s.isProduction = false
 }
 
-//SetLogger ...
 func (s *Server) SetLogger(debug func(v ...interface{}), warn func(v ...interface{}), err func(v ...interface{})) {
 	s.logD = debug
 	s.logW = warn
@@ -354,7 +337,6 @@ func (s *Server) error(v ...interface{}) {
 	s.logW(v...)
 }
 
-//New ...
 func New() *Server {
 	s := &Server{
 		routeMap: make(map[string]map[string]*Route),
