@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"time"
 
 	"github.com/valyala/fasthttp"
@@ -14,7 +15,13 @@ func (r *RequestHeader) Get(key string) string {
 	if val := r.httpHeader.Peek(key); val != nil {
 		return string(val)
 	}
-	return ``
+	val := ``
+	r.httpHeader.VisitAll(func(k, v []byte) {
+		if bytes.EqualFold(k, []byte(key)) {
+			val = string(v)
+		}
+	})
+	return val
 }
 
 func (r *RequestHeader) Cookie(key string) string {
