@@ -34,11 +34,17 @@ func (s *Server) handleOpen(c *websocket.Conn) {
 func (s *Server) handleClose(c *websocket.Conn, err error) {
 	s.clientLock.Lock()
 	defer s.clientLock.Unlock()
+	if client, ok := s.clients[int(c.ID())]; ok {
+		client.receiveClose(err)
+	}
 	delete(s.clients, int(c.ID()))
 }
 func (s *Server) handleError(c *websocket.Conn, err error) {
 	s.clientLock.Lock()
 	defer s.clientLock.Unlock()
+	if client, ok := s.clients[int(c.ID())]; ok {
+		client.receiveError(err)
+	}
 	delete(s.clients, int(c.ID()))
 }
 func (s *Server) handleData(c *websocket.Conn, isBinary bool, data []byte) {

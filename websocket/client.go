@@ -10,6 +10,8 @@ type Client struct {
 	conn      *websocket.Conn
 	writer    *Writer
 	onMessage func(bool, []byte, *Writer)
+	onClose   func(error)
+	onError   func(error)
 
 	preBuffer  []bufferMsg
 	bufferLock sync.Mutex
@@ -22,6 +24,17 @@ func (c *Client) receiveMessage(isBinary bool, data []byte) {
 		c.bufferLock.Lock()
 		defer c.bufferLock.Unlock()
 		c.preBuffer = append(c.preBuffer, bufferMsg{isBinary, data})
+	}
+}
+
+func (c *Client) receiveClose(err error) {
+	if c.onClose != nil {
+		c.onClose(err)
+	}
+}
+func (c *Client) receiveError(err error) {
+	if c.onError != nil {
+		c.onError(err)
 	}
 }
 
@@ -39,6 +52,13 @@ func (c *Client) OnMessage(fn func(isBinary bool, data []byte, w *Writer)) {
 		c.preBuffer = []bufferMsg{}
 	}
 	c.onMessage = fn
+}
+
+func (c *Client) OnClose(fn func(error)) {
+	c.onClose = fn
+}
+func (c *Client) OnError(fn func(error)) {
+	c.onError = fn
 }
 
 func (c *Client) Write(data []byte) (int, error) {
