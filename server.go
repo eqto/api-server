@@ -249,7 +249,7 @@ func (s *Server) Serve(port int) error {
 			ctx.resp.json.Put(`status`, ctx.resp.getStatus())
 			ctx.resp.json.Put(`message`, ctx.resp.getMessage())
 
-			fastCtx.Write(ctx.resp.json.ToBytes())
+			fastCtx.Write(ctx.resp.json.Bytes())
 		}
 	}
 	if s.serv != nil {
